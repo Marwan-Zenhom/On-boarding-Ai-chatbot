@@ -1,95 +1,179 @@
-# 🤖 Onboarding Chat Assistant
+# 🤖 Onboarding Chat - AI-Powered Employee Assistant
 
-An AI-powered chat interface designed to help new employees navigate their onboarding process with company policies, benefits, procedures, and getting started information.
+A full-stack onboarding chat application that helps new employees get familiar with company policies, procedures, and resources using **Google's Gemini AI**.
 
-## ✨ Features
+![Architecture](https://img.shields.io/badge/Architecture-Backend%20%2B%20Frontend-blue)
+![AI](https://img.shields.io/badge/AI-Google%20Gemini%201.5%20Flash-green)
+![Database](https://img.shields.io/badge/Database-Supabase-purple)
+![Frontend](https://img.shields.io/badge/Frontend-React%2018-cyan)
 
-- **Smart Chat Interface** - Dynamic input with mic/send/stop button states
-- **Real-time Typing Animation** - Fast character-by-character display
-- **Message Management** - Edit, react to, and regenerate responses
-- **Conversation History** - Organized by date with favorites and archive
-- **File Upload Support** - Upload and reference documents in chat
-- **Dark/Light Theme** - Toggle between themes with persistence
-- **Mobile Responsive** - Works seamlessly on desktop and mobile
-- **User Authentication** - Mock auth system for demonstration
+## ⚡ **NEW: Real AI Integration!**
+
+This project now features **real generative AI responses** using Google's Gemini AI model, replacing the previous mock responses with intelligent, context-aware assistance.
+
+## 🏗️ Architecture
+
+**Full-Stack Separation:**
+```
+backend/     → Express.js API + Gemini AI integration
+frontend/    → React application
+shared/      → Common types and utilities
+```
+
+## ✨ Key Features
+
+### 🤖 **Real AI Responses**
+- **Google Gemini 1.5 Flash** integration
+- Context-aware conversation history
+- Specialized onboarding assistant persona
+- Intelligent fallback responses
+
+### 💬 **Advanced Chat Interface**
+- Dynamic input states (mic → send → stop)
+- Real-time character-by-character typing
+- Message regeneration with AI
+- File upload support
+- Message reactions and editing
+
+### 💾 **Persistent Storage**
+- Supabase database integration
+- Conversation history and favorites
+- Archive functionality
+- Cross-device synchronization
+
+### 🎨 **Modern UI/UX**
+- Responsive design (mobile-first)
+- Dark/light theme toggle
+- Smooth animations and transitions
+- Keyboard shortcuts ready
 
 ## 🚀 Quick Start
 
+**For detailed setup instructions, see [SETUP.md](SETUP.md)**
+
+### Fast Setup (3 minutes)
+
 ```bash
-# Install dependencies
-npm install
+# 1. Install all dependencies
+npm run setup
 
-# Start development server
-npm start
+# 2. Configure environment variables
+# Copy backend/env.example to backend/.env (add your API keys)
+# Copy frontend/env.example to frontend/.env.local (add your API keys)
 
-# Build for production
-npm run build
+# 3. Run both servers
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+### Get Your API Keys
 
-## 🏗️ Project Structure
+- **Gemini AI**: [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **Supabase**: [Supabase Dashboard](https://supabase.com) > Settings > API
 
-```
-src/
-├── App.js                 # Main application component
-├── index.js              # React entry point
-├── index.css             # Global styles import
-└── styles/               # Modular CSS files
-    ├── variables.css     # CSS custom properties
-    ├── base.css          # Base styles and resets
-    ├── layout.css        # Layout components
-    ├── sidebar.css       # Sidebar styles
-    ├── chat.css          # Chat interface
-    ├── input.css         # Input components
-    ├── modals.css        # Modal dialogs
-    ├── components.css    # UI components
-    ├── animations.css    # Animations and transitions
-    └── responsive.css    # Mobile responsive styles
-```
+### Database Setup
+Run the SQL from [SETUP.md](SETUP.md) in your Supabase SQL Editor.
 
-## 🎨 CSS Architecture
+### Access Points
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:5000
+- **Health Check**: http://localhost:5000/api/health
 
-The project uses a modular CSS approach with:
-- **CSS Custom Properties** for theming
-- **Component-based organization** for maintainability
-- **Mobile-first responsive design**
-- **Dark/light theme support**
+## 🛠️ Tech Stack
 
-## 🛠️ Built With
+### Backend
+- **Express.js** - REST API server
+- **Google Generative AI** - Gemini 1.5 Flash model
+- **Supabase** - Database and real-time updates
+- **CORS, Helmet, Morgan** - Security and logging
 
-- **React 19** - UI framework
+### Frontend
+- **React 18** - UI framework with hooks
 - **Lucide React** - Icon library
-- **CSS Modules** - Styling approach
-- **Local Storage** - Data persistence
+- **CSS Modules** - Styled components
+- **Fetch API** - Backend communication
 
-## 📱 Key Components
+### Database
+- **PostgreSQL** (via Supabase)
+- **Real-time subscriptions**
+- **Row Level Security**
 
-- **AuthModal** - User authentication interface
-- **QuickTemplates** - Predefined conversation starters
-- **FileUpload** - Drag & drop file upload
-- **MessageActions** - Copy, edit, react, regenerate
-- **ConversationDropdown** - Conversation management
-- **ArchivedConversationsModal** - Archive management
+## 🔧 Development Scripts
 
-## 🔧 Configuration
+```bash
+# Root level management
+npm run dev              # Start both backend and frontend
+npm run setup            # Install all dependencies
 
-The app includes sample conversations and can be easily configured for different:
-- Company policies
-- Onboarding procedures
-- Response templates
-- UI themes and styling
+# Backend development
+npm run dev:backend      # Start backend with auto-reload
+npm run start:backend    # Production backend start
+
+# Frontend development  
+npm run dev:frontend     # Start React development server
+npm run build:frontend   # Create production build
+```
+
+## 📚 API Endpoints
+
+### Chat API (`/api/chat/`)
+- `POST /message` - Send message and get AI response
+- `POST /regenerate` - Regenerate last AI response
+- `GET /conversations` - Get all conversations
+
+### System API
+- `GET /api/health` - Health check
+
+## 🎯 Use Cases
+
+Perfect for organizations wanting to improve their onboarding experience:
+
+- **HR Departments** - Automate common onboarding questions
+- **IT Teams** - Provide instant setup guidance
+- **Remote Teams** - Centralized onboarding assistance
+- **Training Programs** - Interactive learning companion
 
 ## 🚀 Deployment
 
+### Development
 ```bash
-# Create production build
-npm run build
-
-# Deploy to your hosting platform
-# (Vercel, Netlify, AWS, etc.)
+npm run dev  # Local development with hot reload
 ```
+
+### Production
+- **Backend**: Deploy to Railway, Render, or Heroku
+- **Frontend**: Deploy to Vercel, Netlify, or Cloudflare Pages
+- **Database**: Supabase (fully managed)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 🔒 Environment Variables
+
+**Required for Backend:**
+- `GEMINI_API_KEY` - Google AI Studio API key
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anon key
+
+**Required for Frontend:**
+- `REACT_APP_API_URL` - Backend API URL
+- `REACT_APP_SUPABASE_URL` - Supabase project URL (optional)
+- `REACT_APP_SUPABASE_ANON_KEY` - Supabase anon key (optional)
 
 ## 📄 License
 
-This project is created for demonstration purposes.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- 📖 **Detailed Setup**: [SETUP.md](SETUP.md)
+- 🐛 **Issues**: [GitHub Issues](../../issues)
+- 💬 **Discussions**: [GitHub Discussions](../../discussions)
+
+---
+
+Built with ❤️ by [Marwan Zenhom](https://github.com/Marwan-Zenhom) 
