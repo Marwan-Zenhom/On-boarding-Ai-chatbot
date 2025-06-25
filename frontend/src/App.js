@@ -274,6 +274,19 @@ export default function App() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const [multiRecognitions, setMultiRecognitions] = useState([]);
+  const [speechLanguage, setSpeechLanguage] = useState(() => {
+    // Try to match browser language with supported languages
+    const browserLang = navigator.language || 'en-US';
+    const supportedCodes = [
+      'en-US', 'en-GB', 'de-DE', 'fr-FR', 'es-ES', 'it-IT', 
+      'pt-PT', 'nl-NL', 'ru-RU', 'ja-JP', 'ko-KR', 'zh-CN', 'ar-SA'
+    ];
+    return supportedCodes.includes(browserLang) ? browserLang : 'en-US';
+  });
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [autoDetectLanguage, setAutoDetectLanguage] = useState(true);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
   const [toast, setToast] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingText, setEditingText] = useState('');
@@ -315,6 +328,23 @@ export default function App() {
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
+
+  // Supported languages for speech recognition
+  const supportedLanguages = [
+    { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+    { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+    { code: 'de-DE', name: 'German', flag: '🇩🇪' },
+    { code: 'fr-FR', name: 'French', flag: '🇫🇷' },
+    { code: 'es-ES', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'it-IT', name: 'Italian', flag: '🇮🇹' },
+    { code: 'pt-PT', name: 'Portuguese', flag: '🇵🇹' },
+    { code: 'nl-NL', name: 'Dutch', flag: '🇳🇱' },
+    { code: 'ru-RU', name: 'Russian', flag: '🇷🇺' },
+    { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko-KR', name: 'Korean', flag: '🇰🇷' },
+    { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+    { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦' }
+  ];
 
   // --- Memoized Values ---
   const filteredConversations = useMemo(() => {
@@ -422,6 +452,9 @@ export default function App() {
       if (openDropdownId && !event.target.closest('.conversation-dropdown') && !event.target.closest('.dropdown-toggle')) {
         setOpenDropdownId(null);
       }
+      if (showLanguageSelector && !event.target.closest('.language-selector') && !event.target.closest('.language-toggle')) {
+        setShowLanguageSelector(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -431,7 +464,7 @@ export default function App() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isMobile, isSidebarOpen, openDropdownId]);
+  }, [isMobile, isSidebarOpen, openDropdownId, showLanguageSelector]);
 
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
@@ -457,61 +490,113 @@ export default function App() {
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
       
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = true;
-      // Try to detect user's language, fallback to English
-      recognitionInstance.lang = navigator.language || 'en-US';
-      
-      recognitionInstance.onstart = () => {
-        setIsRecording(true);
-        showToast('Listening... Speak now', 'info');
-      };
-      
-      recognitionInstance.onresult = (event) => {
-        let finalTranscript = '';
+      if (autoDetectLanguage) {
+        // Create multiple recognition instances for auto-detection
+        const primaryLanguages = ['en-US', 'de-DE', 'fr-FR', 'es-ES', 'it-IT'];
+        const recognitionInstances = [];
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
+        primaryLanguages.forEach(langCode => {
+          const recognitionInstance = new SpeechRecognition();
+          recognitionInstance.continuous = false;
+          recognitionInstance.interimResults = true;
+          recognitionInstance.lang = langCode;
+          
+          recognitionInstance.onresult = (event) => {
+            let finalTranscript = '';
+            let confidence = 0;
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const result = event.results[i];
+              if (result.isFinal) {
+                finalTranscript += result[0].transcript;
+                confidence = result[0].confidence || 0;
+              }
+            }
+            
+            if (finalTranscript && confidence > 0.7) {
+              // Stop all recognition instances
+              recognitionInstances.forEach(rec => {
+                try { rec.stop(); } catch (e) {}
+              });
+              
+              const detectedLang = supportedLanguages.find(lang => lang.code === langCode);
+              setDetectedLanguage(langCode);
+              setSpeechLanguage(langCode);
+              setInput(prev => prev + finalTranscript);
+              setIsRecording(false);
+              showToast(`Detected ${detectedLang?.name || langCode}: "${finalTranscript.substring(0, 30)}..."`, 'success');
+            }
+          };
+          
+          recognitionInstance.onerror = (event) => {
+            if (event.error !== 'aborted' && event.error !== 'no-speech') {
+              console.error(`Speech recognition error (${langCode}):`, event.error);
+            }
+          };
+          
+          recognitionInstances.push(recognitionInstance);
+        });
+        
+        setMultiRecognitions(recognitionInstances);
+      } else {
+        // Single language recognition (manual selection)
+        const recognitionInstance = new SpeechRecognition();
+        
+        recognitionInstance.continuous = false;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = speechLanguage;
+        
+        recognitionInstance.onstart = () => {
+          setIsRecording(true);
+          const selectedLanguage = supportedLanguages.find(lang => lang.code === speechLanguage);
+          showToast(`Listening in ${selectedLanguage?.name || speechLanguage}... Speak now`, 'info');
+        };
+        
+        recognitionInstance.onresult = (event) => {
+          let finalTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            }
           }
-        }
+          
+          if (finalTranscript) {
+            setInput(prev => prev + finalTranscript);
+          }
+        };
         
-        if (finalTranscript) {
-          setInput(prev => prev + finalTranscript);
-        }
-      };
-      
-      recognitionInstance.onend = () => {
-        setIsRecording(false);
-      };
-      
-      recognitionInstance.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        setIsRecording(false);
+        recognitionInstance.onend = () => {
+          setIsRecording(false);
+        };
         
-        let errorMessage = 'Speech recognition error';
-        switch (event.error) {
-          case 'no-speech':
-            errorMessage = 'No speech detected. Try again.';
-            break;
-          case 'not-allowed':
-            errorMessage = 'Microphone access denied. Please allow microphone access.';
-            break;
-          case 'network':
-            errorMessage = 'Network error. Check your connection.';
-            break;
-          default:
-            errorMessage = `Speech recognition error: ${event.error}`;
-        }
-        showToast(errorMessage, 'error');
-      };
-      
-      setRecognition(recognitionInstance);
+        recognitionInstance.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          
+          let errorMessage = 'Speech recognition error';
+          switch (event.error) {
+            case 'no-speech':
+              errorMessage = 'No speech detected. Try again.';
+              break;
+            case 'not-allowed':
+              errorMessage = 'Microphone access denied. Please allow microphone access.';
+              break;
+            case 'network':
+              errorMessage = 'Network error. Check your connection.';
+              break;
+            default:
+              errorMessage = `Speech recognition error: ${event.error}`;
+          }
+          showToast(errorMessage, 'error');
+        };
+        
+        setRecognition(recognitionInstance);
+      }
     }
-  }, [showToast]);
+  }, [showToast, speechLanguage, supportedLanguages, autoDetectLanguage]);
 
   const typeMessage = useCallback((messageId, content) => {
     setTypingMessageId(messageId);
@@ -941,22 +1026,71 @@ export default function App() {
   };
 
   const toggleVoiceMode = () => {
-    if (!recognition) {
-      showToast('Speech recognition not supported in this browser', 'error');
-      return;
-    }
+    if (autoDetectLanguage) {
+      // Auto-detection mode
+      if (!multiRecognitions.length) {
+        showToast('Speech recognition not supported in this browser', 'error');
+        return;
+      }
 
-    if (isRecording) {
-      recognition.stop();
-      showToast('Voice recording stopped');
+      if (isRecording) {
+        // Stop all recognition instances
+        multiRecognitions.forEach(rec => {
+          try { rec.stop(); } catch (e) {}
+        });
+        setIsRecording(false);
+        showToast('Voice recording stopped');
+      } else {
+        try {
+          setIsRecording(true);
+          showToast('Auto-detecting language... Speak now', 'info');
+          
+          // Start all recognition instances
+          multiRecognitions.forEach(rec => {
+            try { rec.start(); } catch (e) {}
+          });
+          
+          // Auto-stop after 10 seconds if no detection
+          setTimeout(() => {
+            if (isRecording) {
+              multiRecognitions.forEach(rec => {
+                try { rec.stop(); } catch (e) {}
+              });
+              setIsRecording(false);
+            }
+          }, 10000);
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          showToast('Failed to start voice recording', 'error');
+          setIsRecording(false);
+        }
+      }
     } else {
-      try {
-        recognition.start();
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-        showToast('Failed to start voice recording', 'error');
+      // Manual selection mode
+      if (!recognition) {
+        showToast('Speech recognition not supported in this browser', 'error');
+        return;
+      }
+
+      if (isRecording) {
+        recognition.stop();
+        showToast('Voice recording stopped');
+      } else {
+        try {
+          recognition.start();
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          showToast('Failed to start voice recording', 'error');
+        }
       }
     }
+  };
+
+  const handleLanguageSelect = (languageCode) => {
+    setSpeechLanguage(languageCode);
+    setShowLanguageSelector(false);
+    const selectedLanguage = supportedLanguages.find(lang => lang.code === languageCode);
+    showToast(`Speech language changed to ${selectedLanguage?.name || languageCode}`);
   };
 
   const stopGeneration = () => {
@@ -1408,6 +1542,67 @@ export default function App() {
                 />
                 
                 <div className="input-actions-right">
+                  {/* Language selector for speech recognition */}
+                  {!input.trim() && (
+                    <div className="language-selector-container">
+                      <button
+                        type="button"
+                        onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                        className="language-toggle"
+                        title={autoDetectLanguage ? "Auto-detecting language" : "Select speech language"}
+                      >
+                        {autoDetectLanguage ? '🌐' : (supportedLanguages.find(lang => lang.code === speechLanguage)?.flag || '🌐')}
+                      </button>
+                      
+                      {showLanguageSelector && (
+                        <div className="language-selector">
+                          <div className="language-mode-toggle">
+                            <button
+                              onClick={() => setAutoDetectLanguage(!autoDetectLanguage)}
+                              className={`mode-toggle-btn ${autoDetectLanguage ? 'active' : ''}`}
+                            >
+                              🤖 Auto-detect
+                            </button>
+                            <button
+                              onClick={() => setAutoDetectLanguage(false)}
+                              className={`mode-toggle-btn ${!autoDetectLanguage ? 'active' : ''}`}
+                            >
+                              🎯 Manual
+                            </button>
+                          </div>
+                          
+                          {detectedLanguage && autoDetectLanguage && (
+                            <div className="detected-language">
+                              <span className="detected-label">Last detected:</span>
+                              <span className="detected-flag">
+                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.flag}
+                              </span>
+                              <span className="detected-name">
+                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.name}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {!autoDetectLanguage && (
+                            <>
+                              {supportedLanguages.map(language => (
+                                <button
+                                  key={language.code}
+                                  onClick={() => handleLanguageSelect(language.code)}
+                                  className={`language-option ${speechLanguage === language.code ? 'active' : ''}`}
+                                  title={language.name}
+                                >
+                                  <span className="language-flag">{language.flag}</span>
+                                  <span className="language-name">{language.name}</span>
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {(() => {
                     const buttonConfig = getInputButton();
                     const IconComponent = buttonConfig.icon;
