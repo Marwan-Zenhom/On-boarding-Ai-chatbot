@@ -1,0 +1,27 @@
+/* 
+ * Modular CSS Architecture
+ * 
+ * This file has been split into smaller, maintainable modules:
+ * - variables.css: CSS custom properties and theme variables
+ * - base.css: Base styles, resets, and typography
+ * - layout.css: Main layout structure
+ * - sidebar.css: Sidebar components and styles
+ * - chat.css: Chat messages and conversation styles
+ * - input.css: Input section and related components
+ * - modals.css: Modal dialogs and overlays
+ * - components.css: Reusable components and utilities
+ * - animations.css: Keyframes and animation utilities
+ * - responsive.css: All responsive and mobile styles
+ */
+
+/* Import all modular stylesheets */
+@import './styles/variables.css';
+@import './styles/base.css';
+@import './styles/layout.css';
+@import './styles/sidebar.css';
+@import './styles/chat.css';
+@import './styles/input.css';
+@import './styles/modals.css';
+@import './styles/components.css';
+@import './styles/animations.css';
+@import './styles/responsive.css';

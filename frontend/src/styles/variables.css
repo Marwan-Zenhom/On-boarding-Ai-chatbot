@@ -1,0 +1,45 @@
+/* Theme variables */
+:root {
+  /* Dark theme */
+  --bg-primary: #212121;
+  --bg-secondary: #2f2f2f;
+  --bg-tertiary: #424242;
+  --text-primary: #ececec;
+  --text-secondary: #c5c5d2;
+  --text-muted: #8e8ea0;
+  --border-color: #4d4d4f;
+  --hover-color: #2f2f2f;
+  --accent-color: #19c37d;
+  --accent-hover: #15a771;
+  --input-bg: #40414f;
+  --shadow: 0 0 15px rgba(0,0,0,0.1);
+  --suggestion-bg: #2f2f2f;
+  --suggestion-border: #4d4d4f;
+}
+
+[data-theme="light"] {
+  /* Light theme */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #f1f1f1;
+  --text-primary: #2d333a;
+  --text-secondary: #565869;
+  --text-muted: #8e8ea0;
+  --border-color: #d1d5db;
+  --hover-color: #f1f1f1;
+  --accent-color: #10a37f;
+  --accent-hover: #0d8a6b;
+  --input-bg: #ffffff;
+  --shadow: 0 0 15px rgba(0,0,0,0.1);
+  --suggestion-bg: #ffffff;
+  --suggestion-border: #d1d5db;
+}
+
+/* Enhanced Dark Mode */
+[data-theme="dark"] {
+  --send-button-hover: #f0f0f0;
+}
+
+[data-theme="light"] {
+  --send-button-hover: #1a1a1a;
+} 

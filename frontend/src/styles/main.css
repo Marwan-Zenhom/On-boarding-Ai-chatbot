@@ -1,0 +1,13 @@
+/* Main CSS file - imports all modular stylesheets */
+
+/* Import order is important: variables first, then base styles, then components */
+@import './variables.css';
+@import './base.css';
+@import './layout.css';
+@import './sidebar.css';
+@import './chat.css';
+@import './input.css';
+@import './modals.css';
+@import './components.css';
+@import './animations.css';
+@import './responsive.css'; 
