@@ -272,7 +272,8 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
   const [toast, setToast] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingText, setEditingText] = useState('');
@@ -308,6 +309,8 @@ export default function App() {
 
     loadConversations();
   }, []);
+
+
 
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -449,6 +452,66 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = true;
+      // Try to detect user's language, fallback to English
+      recognitionInstance.lang = navigator.language || 'en-US';
+      
+      recognitionInstance.onstart = () => {
+        setIsRecording(true);
+        showToast('Listening... Speak now', 'info');
+      };
+      
+      recognitionInstance.onresult = (event) => {
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript) {
+          setInput(prev => prev + finalTranscript);
+        }
+      };
+      
+      recognitionInstance.onend = () => {
+        setIsRecording(false);
+      };
+      
+      recognitionInstance.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+        
+        let errorMessage = 'Speech recognition error';
+        switch (event.error) {
+          case 'no-speech':
+            errorMessage = 'No speech detected. Try again.';
+            break;
+          case 'not-allowed':
+            errorMessage = 'Microphone access denied. Please allow microphone access.';
+            break;
+          case 'network':
+            errorMessage = 'Network error. Check your connection.';
+            break;
+          default:
+            errorMessage = `Speech recognition error: ${event.error}`;
+        }
+        showToast(errorMessage, 'error');
+      };
+      
+      setRecognition(recognitionInstance);
+    }
+  }, [showToast]);
 
   const typeMessage = useCallback((messageId, content) => {
     setTypingMessageId(messageId);
@@ -878,11 +941,21 @@ export default function App() {
   };
 
   const toggleVoiceMode = () => {
-    setIsVoiceMode(!isVoiceMode);
-    if (!isVoiceMode) {
-      showToast('Voice mode activated (demo)');
+    if (!recognition) {
+      showToast('Speech recognition not supported in this browser', 'error');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      showToast('Voice recording stopped');
     } else {
-      showToast('Voice mode deactivated');
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        showToast('Failed to start voice recording', 'error');
+      }
     }
   };
 
@@ -923,10 +996,10 @@ export default function App() {
       };
     } else {
       return {
-        icon: isVoiceMode ? MicOff : Mic,
+        icon: isRecording ? MicOff : Mic,
         onClick: toggleVoiceMode,
-        className: `voice-btn ${isVoiceMode ? 'active' : ''}`,
-        title: "Voice input",
+        className: `voice-btn ${isRecording ? 'recording' : ''}`,
+        title: isRecording ? "Stop recording" : "Start voice input",
         disabled: isLoading || isGenerating || typingMessageId
       };
     }

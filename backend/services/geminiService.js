@@ -13,7 +13,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // Initialize Gemini model
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
+  model: "gemini-2.0-flash",
   generationConfig: {
     temperature: 0.7,
     topK: 1,
@@ -41,6 +41,7 @@ Guidelines:
 - If you don't know something specific, direct them to HR or their manager
 - Keep responses concise but helpful
 - Focus on onboarding-related topics
+- IMPORTANT: Always respond in the same language as the user's input. If they write in English, respond in English. If they write in German, respond in German. If they write in Spanish, respond in Spanish, etc.
 
 Respond as if you're a knowledgeable HR assistant helping a new employee on their first day.`;
 
