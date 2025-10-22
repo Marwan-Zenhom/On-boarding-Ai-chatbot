@@ -4,11 +4,12 @@ import remarkGfm from 'remark-gfm';
 import { 
   Plus, ArrowUp, User, Bot, Sun, Moon, 
   Edit3, Trash2, Search, Copy, Mic, MicOff, 
-  Heart, Archive, Sidebar,
+  Heart, Archive, Sidebar, LogOut,
   ThumbsUp, ThumbsDown, RotateCcw, X, Check, Upload, 
   FileText, Paperclip, MoreHorizontal, Square
 } from 'lucide-react';
 import apiService from './services/apiService';
+import AppRouter from './AppRouter';
 
 // --- Custom Hooks ---
 const useLocalStorage = (key, initialValue) => {
@@ -1660,3 +1661,7 @@ export default function App() {
     </div>
   );
 }
+
+// Export both the main App component and the router
+export default AppRouter;
+export { App as ChatApp };

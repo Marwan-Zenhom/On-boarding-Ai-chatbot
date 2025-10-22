@@ -1,12 +1,11 @@
 import { generateResponse, generateStreamResponse } from '../services/geminiService.js';
 import { supabase } from '../config/database.js';
 
-const FIXED_USER_ID = process.env.FIXED_USER_ID || '550e8400-e29b-41d4-a716-446655440000';
-
 // POST /api/chat/message
 export const sendMessage = async (req, res) => {
   try {
     const { message, conversationId, files } = req.body;
+    const userId = req.user.id; // Get authenticated user ID
 
     if (!message || !message.trim()) {
       return res.status(400).json({ 
@@ -18,6 +17,21 @@ export const sendMessage = async (req, res) => {
     // Get conversation history for context
     let conversationHistory = [];
     if (conversationId) {
+      // Verify user owns this conversation
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!conversation) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Unauthorized access to conversation' 
+        });
+      }
+
       const { data: messages } = await supabase
         .from('messages')
         .select('role, content')
@@ -40,7 +54,7 @@ export const sendMessage = async (req, res) => {
       const { data: newConversation, error: convError } = await supabase
         .from('conversations')
         .insert([{
-          user_id: FIXED_USER_ID,
+          user_id: userId, // Use authenticated user ID
           title,
           is_favourite: false,
           is_archived: false
@@ -208,13 +222,15 @@ export const regenerateResponse = async (req, res) => {
 // GET /api/chat/conversations
 export const getConversations = async (req, res) => {
   try {
+    const userId = req.user.id; // Get authenticated user ID
+
     const { data: conversations, error } = await supabase
       .from('conversations')
       .select(`
         *,
         messages (*)
       `)
-      .eq('user_id', FIXED_USER_ID)
+      .eq('user_id', userId) // Filter by authenticated user
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -240,12 +256,13 @@ export const updateConversation = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userId = req.user.id; // Get authenticated user ID
 
     const { error } = await supabase
       .from('conversations')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', FIXED_USER_ID);
+      .eq('user_id', userId); // Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to update conversation: ${error.message}`);
@@ -269,19 +286,17 @@ export const updateConversation = async (req, res) => {
 export const deleteConversation = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id; // Get authenticated user ID
 
-    // Delete messages first (due to foreign key constraint)
-    await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', id);
+    // RLS will automatically filter, but we can also delete messages manually
+    // Supabase RLS + CASCADE should handle this automatically
     
-    // Then delete conversation
+    // Delete conversation (messages will be deleted via CASCADE)
     const { error } = await supabase
       .from('conversations')
       .delete()
       .eq('id', id)
-      .eq('user_id', FIXED_USER_ID);
+      .eq('user_id', userId); // Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to delete conversation: ${error.message}`);

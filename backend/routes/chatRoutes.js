@@ -1,9 +1,13 @@
 import express from 'express';
 import { sendMessage, regenerateResponse, getConversations, updateConversation, deleteConversation } from '../controllers/chatController.js';
+import { authenticateUser } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Chat routes
+// Apply authentication middleware to all chat routes
+router.use(authenticateUser);
+
+// Chat routes (all protected)
 router.post('/message', sendMessage);
 router.post('/regenerate', regenerateResponse);
 router.get('/conversations', getConversations);
