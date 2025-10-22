@@ -6,7 +6,8 @@ import {
   Edit3, Trash2, Search, Copy, Mic, MicOff, 
   Heart, Archive, Sidebar, LogOut,
   ThumbsUp, ThumbsDown, RotateCcw, X, Check, Upload, 
-  FileText, Paperclip, MoreHorizontal, Square
+  FileText, Paperclip, MoreHorizontal, Square,
+  Settings, HelpCircle, Zap, UserCircle
 } from 'lucide-react';
 import apiService from './services/apiService';
 
@@ -1424,50 +1425,160 @@ function App({ user, onSignOut }) {
                     bottom: 'calc(100% + 8px)',
                     left: '8px',
                     right: '8px',
-                    background: isDarkMode ? '#1f1f1f' : '#ffffff',
-                    border: `1px solid ${isDarkMode ? '#404040' : '#e5e7eb'}`,
-                    borderRadius: '8px',
+                    background: isDarkMode ? '#2c2c2c' : '#ffffff',
+                    border: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
+                    borderRadius: '12px',
                     boxShadow: isDarkMode 
-                      ? '0 -4px 20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
-                      : '0 -4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                      ? '0 -8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
+                      : '0 -8px 24px rgba(0, 0, 0, 0.12)',
                     zIndex: 1000,
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    minWidth: '220px'
                   }}>
-                    <button
-                      onClick={() => {
-                        setShowUserMenu(false);
-                        onSignOut();
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '14px 16px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#ef4444',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        transition: 'all 0.2s ease',
-                        textAlign: 'left',
-                        fontFamily: 'inherit'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = isDarkMode 
-                          ? 'rgba(239, 68, 68, 0.15)' 
-                          : 'rgba(239, 68, 68, 0.1)';
-                        e.currentTarget.style.color = '#dc2626';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.color = '#ef4444';
-                      }}
-                    >
-                      <LogOut size={18} />
-                      Sign out
-                    </button>
+                    {/* User Email */}
+                    <div style={{
+                      padding: '12px 16px',
+                      borderBottom: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
+                      color: isDarkMode ? '#9ca3af' : '#6b7280',
+                      fontSize: '13px'
+                    }}>
+                      {user?.email}
+                    </div>
+
+                    {/* Menu Items */}
+                    <div style={{ padding: '4px 0' }}>
+                      {/* Personalization */}
+                      <button
+                        onClick={() => setShowUserMenu(false)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <Zap size={18} />
+                        Upgrade plan
+                      </button>
+
+                      {/* Settings */}
+                      <button
+                        onClick={() => setShowUserMenu(false)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <Settings size={18} />
+                        Settings
+                      </button>
+                    </div>
+
+                    {/* Separator */}
+                    <div style={{
+                      height: '1px',
+                      background: isDarkMode ? '#3f3f3f' : '#e5e7eb',
+                      margin: '4px 0'
+                    }} />
+
+                    {/* Help */}
+                    <div style={{ padding: '4px 0' }}>
+                      <button
+                        onClick={() => setShowUserMenu(false)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <HelpCircle size={18} />
+                        Help
+                      </button>
+
+                      {/* Log out */}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          onSignOut();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <LogOut size={18} />
+                        Log out
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
