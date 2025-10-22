@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ChatApp } from '../App';
+import App from '../App';
 
 const ChatPage = () => {
   const { user, signOut } = useAuth();
@@ -14,7 +14,7 @@ const ChatPage = () => {
 
   return (
     <div>
-      <ChatApp user={user} onSignOut={handleSignOut} />
+      <App user={user} onSignOut={handleSignOut} />
     </div>
   );
 };

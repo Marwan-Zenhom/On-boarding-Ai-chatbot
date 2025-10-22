@@ -9,7 +9,6 @@ import {
   FileText, Paperclip, MoreHorizontal, Square
 } from 'lucide-react';
 import apiService from './services/apiService';
-import AppRouter from './AppRouter';
 
 // --- Custom Hooks ---
 const useLocalStorage = (key, initialValue) => {
@@ -260,7 +259,7 @@ const MessageActions = ({ message, onCopy, onEdit, onReact, onRegenerate }) => (
 );
 
 // --- Main App Component ---
-export default function App() {
+function App({ user, onSignOut }) {
   // --- State Management ---
   const [pastConversations, setPastConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
@@ -1338,16 +1337,94 @@ export default function App() {
             {!isSidebarCollapsed && <span>Archived ({archivedConversations.length})</span>}
           </button>
           
-          {!isSidebarCollapsed && (
+          {!isSidebarCollapsed && user && (
             <div className="user-section">
-              <div style={{ 
-                padding: '10px', 
-                textAlign: 'center', 
-                fontSize: '12px', 
-                color: '#666',
-                borderTop: '1px solid #eee'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '12px 16px',
+                borderTop: '1px solid var(--border-color)',
+                marginTop: '8px',
+                gap: '12px'
               }}>
-                Single User Mode - No Login Required
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  flex: 1,
+                  minWidth: 0
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    flexShrink: 0
+                  }}>
+                    {(user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
+                  </div>
+                  <div style={{
+                    flex: 1,
+                    minWidth: 0
+                  }}>
+                    <div style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: 'var(--text-primary)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: '#999',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {user.email}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={onSignOut}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'transparent',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--hover-color)';
+                    e.currentTarget.style.borderColor = '#999';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                  }}
+                  title="Sign out"
+                >
+                  <LogOut size={14} />
+                  Sign out
+                </button>
               </div>
             </div>
           )}
@@ -1662,6 +1739,4 @@ export default function App() {
   );
 }
 
-// Export both the main App component and the router
-export default AppRouter;
-export { App as ChatApp };
+export default App;

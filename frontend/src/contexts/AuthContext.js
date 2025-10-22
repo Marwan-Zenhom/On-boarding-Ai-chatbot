@@ -45,10 +45,16 @@ export const AuthProvider = ({ children }) => {
           data: {
             display_name: displayName || email,
           },
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase signup error:', error);
+        throw error;
+      }
+      
+      console.log('Signup successful:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Signup error:', error);
@@ -128,4 +134,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export default AuthContext;
+
 

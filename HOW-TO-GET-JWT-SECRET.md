@@ -38,3 +38,4 @@ If you're using Supabase locally or self-hosting:
 If you're using Supabase Cloud:
 - It's always available in **Settings > API > JWT Settings**
 
+
