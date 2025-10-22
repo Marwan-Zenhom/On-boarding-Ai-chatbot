@@ -1421,14 +1421,13 @@ function App({ user, onSignOut }) {
                   />
                   <div style={{
                     position: 'absolute',
-                    bottom: '100%',
-                    left: '16px',
-                    right: '16px',
-                    marginBottom: '8px',
+                    bottom: 'calc(100% + 4px)',
+                    left: '8px',
+                    right: '8px',
                     background: 'var(--sidebar-bg)',
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.15)',
                     zIndex: 999,
                     overflow: 'hidden'
                   }}>
@@ -1449,7 +1448,8 @@ function App({ user, onSignOut }) {
                         color: '#ef4444',
                         fontSize: '14px',
                         fontWeight: '500',
-                        transition: 'background 0.2s'
+                        transition: 'background 0.2s',
+                        textAlign: 'left'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
