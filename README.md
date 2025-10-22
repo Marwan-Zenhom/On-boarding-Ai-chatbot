@@ -1,179 +1,284 @@
-# 🤖 Onboarding Chat - AI-Powered Employee Assistant
+# 🤖 AI-Powered Onboarding Chatbot
 
-A full-stack onboarding chat application that helps new employees get familiar with company policies, procedures, and resources using **Google's Gemini AI**.
-
-![Architecture](https://img.shields.io/badge/Architecture-Backend%20%2B%20Frontend-blue)
-![AI](https://img.shields.io/badge/AI-Google%20Gemini%201.5%20Flash-green)
-![Database](https://img.shields.io/badge/Database-Supabase-purple)
-![Frontend](https://img.shields.io/badge/Frontend-React%2018-cyan)
-
-## ⚡ **NEW: Real AI Integration!**
-
-This project now features **real generative AI responses** using Google's Gemini AI model, replacing the previous mock responses with intelligent, context-aware assistance.
-
-## 🏗️ Architecture
-
-**Full-Stack Separation:**
-```
-backend/     → Express.js API + Gemini AI integration
-frontend/    → React application
-shared/      → Common types and utilities
-```
-
-## ✨ Key Features
-
-### 🤖 **Real AI Responses**
-- **Google Gemini 1.5 Flash** integration
-- Context-aware conversation history
-- Specialized onboarding assistant persona
-- Intelligent fallback responses
-
-### 💬 **Advanced Chat Interface**
-- Dynamic input states (mic → send → stop)
-- Real-time character-by-character typing
-- Message regeneration with AI
-- File upload support
-- Message reactions and editing
-
-### 💾 **Persistent Storage**
-- Supabase database integration
-- Conversation history and favorites
-- Archive functionality
-- Cross-device synchronization
-
-### 🎨 **Modern UI/UX**
-- Responsive design (mobile-first)
-- Dark/light theme toggle
-- Smooth animations and transitions
-- Keyboard shortcuts ready
-
-## 🚀 Quick Start
-
-**For detailed setup instructions, see [SETUP.md](SETUP.md)**
-
-### Fast Setup (3 minutes)
-
-```bash
-# 1. Install all dependencies
-npm run setup
-
-# 2. Configure environment variables
-# Copy backend/env.example to backend/.env (add your API keys)
-# Copy frontend/env.example to frontend/.env.local (add your API keys)
-
-# 3. Run both servers
-npm run dev
-```
-
-### Get Your API Keys
-
-- **Gemini AI**: [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **Supabase**: [Supabase Dashboard](https://supabase.com) > Settings > API
-
-### Database Setup
-Run the SQL from [SETUP.md](SETUP.md) in your Supabase SQL Editor.
-
-### Access Points
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **Health Check**: http://localhost:5000/api/health
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Express.js** - REST API server
-- **Google Generative AI** - Gemini 1.5 Flash model
-- **Supabase** - Database and real-time updates
-- **CORS, Helmet, Morgan** - Security and logging
-
-### Frontend
-- **React 18** - UI framework with hooks
-- **Lucide React** - Icon library
-- **CSS Modules** - Styled components
-- **Fetch API** - Backend communication
-
-### Database
-- **PostgreSQL** (via Supabase)
-- **Real-time subscriptions**
-- **Row Level Security**
-
-## 🔧 Development Scripts
-
-```bash
-# Root level management
-npm run dev              # Start both backend and frontend
-npm run setup            # Install all dependencies
-
-# Backend development
-npm run dev:backend      # Start backend with auto-reload
-npm run start:backend    # Production backend start
-
-# Frontend development  
-npm run dev:frontend     # Start React development server
-npm run build:frontend   # Create production build
-```
-
-## 📚 API Endpoints
-
-### Chat API (`/api/chat/`)
-- `POST /message` - Send message and get AI response
-- `POST /regenerate` - Regenerate last AI response
-- `GET /conversations` - Get all conversations
-
-### System API
-- `GET /api/health` - Health check
-
-## 🎯 Use Cases
-
-Perfect for organizations wanting to improve their onboarding experience:
-
-- **HR Departments** - Automate common onboarding questions
-- **IT Teams** - Provide instant setup guidance
-- **Remote Teams** - Centralized onboarding assistance
-- **Training Programs** - Interactive learning companion
-
-## 🚀 Deployment
-
-### Development
-```bash
-npm run dev  # Local development with hot reload
-```
-
-### Production
-- **Backend**: Deploy to Railway, Render, or Heroku
-- **Frontend**: Deploy to Vercel, Netlify, or Cloudflare Pages
-- **Database**: Supabase (fully managed)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 🔒 Environment Variables
-
-**Required for Backend:**
-- `GEMINI_API_KEY` - Google AI Studio API key
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_ANON_KEY` - Supabase anon key
-
-**Required for Frontend:**
-- `REACT_APP_API_URL` - Backend API URL
-- `REACT_APP_SUPABASE_URL` - Supabase project URL (optional)
-- `REACT_APP_SUPABASE_ANON_KEY` - Supabase anon key (optional)
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- 📖 **Detailed Setup**: [SETUP.md](SETUP.md)
-- 🐛 **Issues**: [GitHub Issues](../../issues)
-- 💬 **Discussions**: [GitHub Discussions](../../discussions)
+An intelligent chatbot designed to help new employees navigate their onboarding journey at NovaTech. Built with React, Express, and Google Gemini AI, featuring semantic search over a custom knowledge base.
 
 ---
 
-Built with ❤️ by [Marwan Zenhom](https://github.com/Marwan-Zenhom)
+## ✨ Features
+
+### 🧠 Intelligent AI Assistant
+- **Semantic Search:** Finds relevant information using vector embeddings (Hugging Face)
+- **Context-Aware:** Remembers conversation history and understands follow-up questions
+- **Natural Language:** Friendly, conversational responses with proper formatting
+- **Knowledge Base:** Pre-loaded with employee data, FAQs, and onboarding tasks
+
+### 💬 Modern Chat Interface
+- **Real-time Messaging:** Instant responses with typing indicators
+- **Rich Formatting:** Markdown rendering with bold text, lists, and proper spacing
+- **Multi-Conversation:** Create and manage multiple chat sessions
+- **Dark/Light Theme:** Toggle between themes
+- **Voice Input:** Speech-to-text support
+- **Message Actions:** Copy, edit, regenerate, and react to messages
+
+### 🔒 Secure & Scalable
+- **Backend API:** Express.js REST API with proper error handling
+- **Database:** PostgreSQL (Supabase) with vector search capabilities
+- **Environment Variables:** Secure credential management
+- **Retry Logic:** Handles API overload gracefully
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────┐
+│   React     │ ← Frontend (Port 3000)
+│  Frontend   │   - Modern UI with Lucide icons
+└──────┬──────┘   - Markdown rendering
+       │          - State management
+       ↓
+┌─────────────┐
+│   Express   │ ← Backend API (Port 8000)
+│   Backend   │   - RESTful endpoints
+└──────┬──────┘   - Business logic
+       │
+       ├─→ Google Gemini AI (Text generation)
+       ├─→ Hugging Face (Vector embeddings)
+       └─→ Supabase (PostgreSQL + pgvector)
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js v18+
+- Supabase account (free tier)
+- Google Gemini API key (free)
+- Hugging Face token (free)
+
+### Installation
+
+1. **Clone and setup:**
+   ```bash
+   cd On-boarding-Ai-chatbot
+   ```
+
+2. **Follow the Quick Start Guide:**
+   See `QUICKSTART.md` for step-by-step instructions (5 minutes)
+
+3. **Or follow detailed setup:**
+   See `SETUP.md` for comprehensive documentation
+
+---
+
+## 📁 Project Structure
+
+```
+On-boarding-Ai-chatbot/
+├── backend/                # Express.js API server
+│   ├── config/            # Database configuration
+│   ├── controllers/       # Request handlers
+│   ├── routes/           # API routes
+│   ├── services/         # Business logic
+│   │   ├── geminiService.js         # AI response generation
+│   │   ├── knowledgeBaseService.js  # Vector embeddings & search
+│   │   └── keywordSearchService.js  # Fallback keyword search
+│   ├── scripts/          # Utility scripts
+│   │   ├── loadKnowledgeBase.js    # CSV loader
+│   │   └── clearKnowledgeBase.js   # Data cleanup
+│   ├── database/         # SQL schemas
+│   └── data/             # CSV knowledge base files
+│
+├── frontend/              # React application
+│   ├── src/
+│   │   ├── App.js        # Main component
+│   │   ├── services/     # API client
+│   │   └── styles/       # CSS modules
+│   └── public/           # Static assets
+│
+├── QUICKSTART.md         # 5-minute setup guide
+├── SETUP.md             # Detailed documentation
+└── README.md            # This file
+```
+
+---
+
+## 🛠️ Technology Stack
+
+### Frontend
+- **React 19** - UI framework
+- **Lucide React** - Icon library
+- **React Markdown** - Formatted message rendering
+- **Remark GFM** - GitHub Flavored Markdown
+
+### Backend
+- **Express.js** - Web framework
+- **Google Gemini AI** - Text generation (gemini-2.0-flash)
+- **Hugging Face** - Vector embeddings (all-MiniLM-L6-v2)
+- **Supabase** - PostgreSQL database with pgvector extension
+- **Node.js 18+** - Runtime environment
+
+---
+
+## 🔑 API Endpoints
+
+### Chat Endpoints
+- `POST /api/chat/message` - Send a message
+- `POST /api/chat/regenerate/:messageId` - Regenerate response
+- `GET /api/chat/conversations` - Get all conversations
+- `PUT /api/chat/conversations/:id` - Update conversation
+- `DELETE /api/chat/conversations/:id` - Delete conversation
+
+### Health Check
+- `GET /api/health` - Server status
+
+---
+
+## 🎯 How It Works
+
+### 1. **User asks a question**
+   → Frontend sends message to backend
+
+### 2. **Semantic Search**
+   → Generate embedding for user query (Hugging Face)
+   → Search knowledge base using vector similarity (Supabase)
+   → Retrieve top 3 most relevant documents
+
+### 3. **AI Response Generation**
+   → Build context with retrieved documents + conversation history
+   → Send to Google Gemini with formatting instructions
+   → Return formatted response with markdown
+
+### 4. **Frontend Rendering**
+   → Parse markdown (bold, lists, line breaks)
+   → Display beautifully formatted response
+
+---
+
+## 🧪 Example Queries
+
+Try asking:
+- **Employee Info:** "Who is Milan Nguyen? What's his email?"
+- **Department Search:** "Who works in Software Development?"
+- **Company Policies:** "How many vacation days do I have?"
+- **Onboarding Tasks:** "What are the onboarding tasks for HR?"
+- **Follow-up Questions:** "What's his role?" (after asking about someone)
+
+---
+
+## 📊 Knowledge Base
+
+The system uses 3 CSV files:
+
+1. **Employees** (30 records)
+   - Names, ages, departments, roles, emails, supervisors
+
+2. **FAQs** (Company Policies)
+   - Vacation days, sick leave, health insurance, etc.
+
+3. **Onboarding Tasks** (By Department)
+   - Preboarding, Day 1, Week 1, Month 1 tasks
+
+---
+
+## 🔐 Environment Variables
+
+### Backend (`backend/.env`)
+```env
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+GEMINI_API_KEY=your_gemini_api_key
+HUGGINGFACE_API_KEY=your_huggingface_token
+PORT=8000
+NODE_ENV=development
+```
+
+### Frontend (`frontend/.env`)
+```env
+REACT_APP_API_URL=http://localhost:8000
+```
+
+---
+
+## 🚦 Running the Application
+
+### Development Mode
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+node server.js
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm start
+```
+
+Access at: http://localhost:3000
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**1. Port already in use**
+```bash
+taskkill /F /IM node.exe  # Windows
+```
+
+**2. Gemini API overloaded (503)**
+- System automatically retries 3 times with exponential backoff
+- Wait a few seconds and try again
+
+**3. No search results**
+- Check if knowledge base is loaded: `backend/data/` should have 3 CSV files
+- Reload: `node scripts/loadKnowledgeBase.js`
+
+**4. Frontend warnings (ESLint)**
+- Warnings are normal and don't affect functionality
+- React markdown components intentionally use dynamic content
+
+---
+
+## 📈 Future Enhancements (Phase 2)
+
+- [ ] User authentication (OAuth 2.0)
+- [ ] Multi-user support with isolated chat histories
+- [ ] Role-based access control
+- [ ] Admin dashboard for knowledge base management
+- [ ] Analytics and usage tracking
+- [ ] Multi-language support
+- [ ] File upload and processing
+
+---
+
+## 📝 License
+
+This project is part of a thesis prototype.
+
+---
+
+## 🤝 Support
+
+For issues or questions:
+1. Check `SETUP.md` for detailed documentation
+2. Review `QUICKSTART.md` for common setup issues
+3. Ensure all environment variables are correctly set
+4. Verify API keys are valid and have sufficient quota
+
+---
+
+## 🎓 Thesis Project
+
+**Project:** AI-Powered Onboarding Chat Assistant  
+**Institution:** [Your University]  
+**Year:** 2025  
+**Purpose:** Prototype demonstrating RAG (Retrieval Augmented Generation) for enterprise onboarding
+
+---
+
+**Built with ❤️ using React, Express, Google Gemini, and Hugging Face**

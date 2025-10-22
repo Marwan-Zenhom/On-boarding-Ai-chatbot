@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Plus, ArrowUp, User, Bot, Sun, Moon, 
   Edit3, Trash2, Search, Copy, Mic, MicOff, 
@@ -1426,9 +1428,37 @@ export default function App() {
                     ) : (
                       <>
                         <div className="message-text">
-                          {msg.role === 'assistant' && displayedContent[msg.id] !== undefined
-                            ? displayedContent[msg.id]
-                            : msg.content}
+                          {msg.role === 'assistant' ? (
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]}
+                              components={{
+                                // Custom styling for markdown elements
+                                p: ({node, ...props}) => <p style={{marginBottom: '0.8em'}} {...props} />,
+                                strong: ({node, ...props}) => <strong style={{fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
+                                ul: ({node, ...props}) => <ul style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                ol: ({node, ...props}) => <ol style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                li: ({node, ...props}) => <li style={{marginBottom: '0.4em'}} {...props} />,
+                                // eslint-disable-next-line jsx-a11y/heading-has-content
+                                h1: ({node, ...props}) => <h1 style={{fontSize: '1.4em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                // eslint-disable-next-line jsx-a11y/heading-has-content
+                                h2: ({node, ...props}) => <h2 style={{fontSize: '1.2em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                // eslint-disable-next-line jsx-a11y/heading-has-content
+                                h3: ({node, ...props}) => <h3 style={{fontSize: '1.1em', fontWeight: 600, marginBottom: '0.4em'}} {...props} />,
+                                code: ({node, inline, ...props}) => 
+                                  inline 
+                                    ? <code style={{background: 'var(--surface-secondary)', padding: '0.2em 0.4em', borderRadius: '3px', fontSize: '0.9em'}} {...props} />
+                                    : <code style={{display: 'block', background: 'var(--surface-secondary)', padding: '1em', borderRadius: '6px', overflow: 'auto', fontSize: '0.9em'}} {...props} />
+                              }}
+                            >
+                              {displayedContent[msg.id] !== undefined
+                                ? displayedContent[msg.id]
+                                : msg.content}
+                            </ReactMarkdown>
+                          ) : (
+                            <>
+                              {msg.content}
+                            </>
+                          )}
                           {typingMessageId === msg.id && (
                             <span className="typing-cursor">|</span>
                           )}
