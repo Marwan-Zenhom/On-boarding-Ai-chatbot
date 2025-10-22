@@ -5,10 +5,16 @@
 -- and implements Row Level Security (RLS) for data isolation
 -- ============================================================================
 
--- Step 1: Add user_id to conversations table
+-- Step 1: Add user_id and updated_at to conversations table
 -- ============================================================================
+
+-- Add user_id column
 ALTER TABLE conversations 
 ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add updated_at column if it doesn't exist
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- Create index for better query performance
 CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
@@ -151,17 +157,35 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Function to cleanup old conversations (optional)
+-- Only works if updated_at column exists
 CREATE OR REPLACE FUNCTION cleanup_old_conversations(days_old INTEGER DEFAULT 90)
 RETURNS INTEGER AS $$
 DECLARE
   deleted_count INTEGER;
+  has_updated_at BOOLEAN;
 BEGIN
-  DELETE FROM conversations
-  WHERE user_id = auth.uid()
-    AND updated_at < NOW() - (days_old || ' days')::INTERVAL;
+  -- Check if updated_at column exists
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'conversations' AND column_name = 'updated_at'
+  ) INTO has_updated_at;
   
-  GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  RETURN deleted_count;
+  IF has_updated_at THEN
+    DELETE FROM conversations
+    WHERE user_id = auth.uid()
+      AND updated_at < NOW() - (days_old || ' days')::INTERVAL;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+  ELSE
+    -- If no updated_at, delete based on created_at
+    DELETE FROM conversations
+    WHERE user_id = auth.uid()
+      AND created_at < NOW() - (days_old || ' days')::INTERVAL;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -185,8 +209,17 @@ GRANT ALL ON user_profiles TO service_role;
 CREATE INDEX IF NOT EXISTS idx_user_profiles_display_name ON user_profiles(display_name);
 
 -- Composite index for conversations filtering and sorting
-CREATE INDEX IF NOT EXISTS idx_conversations_user_updated 
-ON conversations(user_id, updated_at DESC);
+-- Only create if updated_at column exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'conversations' AND column_name = 'updated_at'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_conversations_user_updated 
+    ON conversations(user_id, updated_at DESC);
+  END IF;
+END $$;
 
 -- Step 10: Add updated_at trigger for user_profiles
 -- ============================================================================
