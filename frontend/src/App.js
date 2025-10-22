@@ -1685,9 +1685,14 @@ function App({ user, onSignOut }) {
                 <div className="input-actions-left">
                   <button
                     type="button"
-                    onClick={() => setShowFileUpload(true)}
-                    className="file-btn"
-                    title="Upload files"
+                    onClick={(e) => e.preventDefault()}
+                    className="file-btn disabled"
+                    title="Coming soon"
+                    disabled
+                    style={{
+                      cursor: 'not-allowed',
+                      opacity: 0.5
+                    }}
                   >
                     <Paperclip className="icon" />
                   </button>
