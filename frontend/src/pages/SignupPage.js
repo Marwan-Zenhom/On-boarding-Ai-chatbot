@@ -103,13 +103,14 @@ const SignupPage = () => {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label htmlFor="displayName">Display Name (Optional)</label>
+            <label htmlFor="displayName">Display Name</label>
             <input
               id="displayName"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="John Doe"
+              required
               disabled={loading}
             />
           </div>
@@ -195,21 +196,6 @@ const SignupPage = () => {
               />
             </svg>
             Google
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleOAuth('azure')}
-            className="oauth-button microsoft"
-            disabled={loading}
-          >
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path fill="#f25022" d="M0 0h11.5v11.5H0z" />
-              <path fill="#00a4ef" d="M12.5 0H24v11.5H12.5z" />
-              <path fill="#7fba00" d="M0 12.5h11.5V24H0z" />
-              <path fill="#ffb900" d="M12.5 12.5H24V24H12.5z" />
-            </svg>
-            Microsoft
           </button>
         </div>
 
