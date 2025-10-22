@@ -1421,14 +1421,16 @@ function App({ user, onSignOut }) {
                   />
                   <div style={{
                     position: 'absolute',
-                    bottom: 'calc(100% + 4px)',
+                    bottom: 'calc(100% + 8px)',
                     left: '8px',
                     right: '8px',
-                    background: 'var(--sidebar-bg)',
-                    border: '1px solid var(--border-color)',
+                    background: isDarkMode ? '#1f1f1f' : '#ffffff',
+                    border: `1px solid ${isDarkMode ? '#404040' : '#e5e7eb'}`,
                     borderRadius: '8px',
-                    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.15)',
-                    zIndex: 999,
+                    boxShadow: isDarkMode 
+                      ? '0 -4px 20px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
+                      : '0 -4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                    zIndex: 1000,
                     overflow: 'hidden'
                   }}>
                     <button
@@ -1441,21 +1443,26 @@ function App({ user, onSignOut }) {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '12px',
-                        padding: '12px 16px',
+                        padding: '14px 16px',
                         background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                         color: '#ef4444',
                         fontSize: '14px',
-                        fontWeight: '500',
-                        transition: 'background 0.2s',
-                        textAlign: 'left'
+                        fontWeight: '600',
+                        transition: 'all 0.2s ease',
+                        textAlign: 'left',
+                        fontFamily: 'inherit'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                        e.currentTarget.style.background = isDarkMode 
+                          ? 'rgba(239, 68, 68, 0.15)' 
+                          : 'rgba(239, 68, 68, 0.1)';
+                        e.currentTarget.style.color = '#dc2626';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = '#ef4444';
                       }}
                     >
                       <LogOut size={18} />
