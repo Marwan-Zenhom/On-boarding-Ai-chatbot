@@ -1901,8 +1901,7 @@ function App({ user, onSignOut }) {
                   <div style={{
                     position: 'absolute',
                     bottom: 'calc(100% + 8px)',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
+                    right: '8px',
                     width: '280px',
                     background: isDarkMode ? '#2c2c2c' : '#ffffff',
                     border: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
@@ -1960,7 +1959,7 @@ function App({ user, onSignOut }) {
                     </div>
 
                     {/* Menu Items */}
-                    <div style={{ padding: '4px 0' }}>
+                    <div style={{ padding: '8px' }}>
                       {/* Profile Settings */}
                       <button
                         onClick={() => {
@@ -1975,6 +1974,7 @@ function App({ user, onSignOut }) {
                           padding: '12px 16px',
                           background: 'transparent',
                           border: 'none',
+                          borderRadius: '8px',
                           cursor: 'pointer',
                           color: isDarkMode ? '#e5e7eb' : '#1f2937',
                           fontSize: '14px',
@@ -2015,6 +2015,7 @@ function App({ user, onSignOut }) {
                           padding: '12px 16px',
                           background: 'transparent',
                           border: 'none',
+                          borderRadius: '8px',
                           cursor: 'pointer',
                           color: isDarkMode ? '#e5e7eb' : '#1f2937',
                           fontSize: '14px',
