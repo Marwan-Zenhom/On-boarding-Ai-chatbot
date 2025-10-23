@@ -167,9 +167,17 @@ export const AuthProvider = ({ children }) => {
 
   const uploadProfileImage = async (file) => {
     try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      
+      // Remove any subfolders - upload directly to bucket root
+      const filePath = fileName;
+
+      console.log('Uploading to:', filePath);
 
       // Upload image to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -179,12 +187,19 @@ export const AuthProvider = ({ children }) => {
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload successful:', uploadData);
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+
+      console.log('Public URL:', publicUrl);
 
       // Update user metadata with avatar URL
       const { data, error } = await supabase.auth.updateUser({
@@ -193,7 +208,12 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update user metadata error:', error);
+        throw error;
+      }
+
+      console.log('User metadata updated');
 
       // Update local user state
       setUser(data.user);
