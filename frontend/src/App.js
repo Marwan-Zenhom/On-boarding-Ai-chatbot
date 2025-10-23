@@ -1901,7 +1901,8 @@ function App({ user, onSignOut }) {
                   <div style={{
                     position: 'absolute',
                     bottom: 'calc(100% + 8px)',
-                    left: '-200px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
                     width: '280px',
                     background: isDarkMode ? '#2c2c2c' : '#ffffff',
                     border: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
