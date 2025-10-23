@@ -119,6 +119,92 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (updates) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: updates,
+      });
+
+      if (error) throw error;
+      
+      // Update local user state
+      setUser(data.user);
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updateEmail = async (newEmail) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        email: newEmail,
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Update email error:', error);
+      return { data: null, error };
+    }
+  };
+
+  const updatePassword = async (newPassword) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error('Update password error:', error);
+      return { data: null, error };
+    }
+  };
+
+  const uploadProfileImage = async (file) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload image to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update user metadata with avatar URL
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: publicUrl,
+        },
+      });
+
+      if (error) throw error;
+
+      // Update local user state
+      setUser(data.user);
+
+      return { data: publicUrl, error: null };
+    } catch (error) {
+      console.error('Upload profile image error:', error);
+      return { data: null, error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -128,6 +214,10 @@ export const AuthProvider = ({ children }) => {
     signInWithOAuth,
     signOut,
     resetPassword,
+    updateProfile,
+    updateEmail,
+    updatePassword,
+    uploadProfileImage,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

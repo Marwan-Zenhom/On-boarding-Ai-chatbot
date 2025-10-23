@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import App from '../App';
 
 const ChatPage = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile, updateEmail, updatePassword, uploadProfileImage } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -12,9 +12,16 @@ const ChatPage = () => {
     navigate('/login');
   };
 
+  const authFunctions = {
+    updateProfile,
+    updateEmail,
+    updatePassword,
+    uploadProfileImage,
+  };
+
   return (
     <div>
-      <App user={user} onSignOut={handleSignOut} />
+      <App user={user} onSignOut={handleSignOut} authFunctions={authFunctions} />
     </div>
   );
 };

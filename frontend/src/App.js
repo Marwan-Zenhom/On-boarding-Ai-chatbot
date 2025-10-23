@@ -260,7 +260,7 @@ const MessageActions = ({ message, onCopy, onEdit, onReact, onRegenerate }) => (
 );
 
 // --- Profile Settings Modal Component ---
-const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
+const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate, authFunctions }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -297,19 +297,30 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
     setIsLoading(true);
 
     try {
-      // Here you would call your API to update the profile
-      // For now, we'll just simulate it
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const updatedData = {
-        displayName,
-        email,
-        profileImage
-      };
+      // Upload profile image if one was selected
+      if (profileImage) {
+        const { data: imageUrl, error: imageError } = await authFunctions.uploadProfileImage(profileImage);
+        if (imageError) throw imageError;
+        console.log('Image uploaded:', imageUrl);
+      }
+
+      // Update display name
+      if (displayName !== user?.user_metadata?.display_name) {
+        const { error: profileError } = await authFunctions.updateProfile({
+          display_name: displayName,
+        });
+        if (profileError) throw profileError;
+      }
+
+      // Update email if changed
+      if (email !== user?.email) {
+        const { error: emailError } = await authFunctions.updateEmail(email);
+        if (emailError) throw emailError;
+      }
       
       setSuccess('Profile updated successfully!');
       setTimeout(() => {
-        onUpdate(updatedData);
+        onUpdate({ displayName, email });
       }, 1500);
     } catch (err) {
       setError(err.message || 'Failed to update profile');
@@ -336,8 +347,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
     setIsLoading(true);
 
     try {
-      // Here you would call your API to update the password
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error: passwordError } = await authFunctions.updatePassword(newPassword);
+      if (passwordError) throw passwordError;
       
       setSuccess('Password updated successfully!');
       setCurrentPassword('');
@@ -453,7 +464,9 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                   width: '120px',
                   height: '120px',
                   borderRadius: '50%',
-                  background: imagePreview ? `url(${imagePreview}) center/cover` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: (imagePreview || user?.user_metadata?.avatar_url) 
+                    ? `url(${imagePreview || user?.user_metadata?.avatar_url}) center/cover` 
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   margin: '0 auto 16px',
                   display: 'flex',
                   alignItems: 'center',
@@ -467,7 +480,7 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                 }}
                 onClick={() => fileInputRef.current?.click()}
                 >
-                  {!imagePreview && (user?.user_metadata?.display_name || user?.email || 'U')[0].toUpperCase()}
+                  {!(imagePreview || user?.user_metadata?.avatar_url) && (user?.user_metadata?.display_name || user?.email || 'U')[0].toUpperCase()}
                   <div style={{
                     position: 'absolute',
                     bottom: 0,
@@ -744,7 +757,7 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
 };
 
 // --- Main App Component ---
-function App({ user, onSignOut }) {
+function App({ user, onSignOut, authFunctions }) {
   // --- State Management ---
   const [pastConversations, setPastConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
@@ -1853,7 +1866,9 @@ function App({ user, onSignOut }) {
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: user?.user_metadata?.avatar_url
+                    ? `url(${user.user_metadata.avatar_url}) center/cover`
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1862,7 +1877,7 @@ function App({ user, onSignOut }) {
                   fontSize: '16px',
                   flexShrink: 0
                 }}>
-                  {(user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
+                  {!user?.user_metadata?.avatar_url && (user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
                 </div>
                 <div style={{
                   flex: 1,
@@ -1932,7 +1947,9 @@ function App({ user, onSignOut }) {
                         width: '48px',
                         height: '48px',
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: user?.user_metadata?.avatar_url
+                          ? `url(${user.user_metadata.avatar_url}) center/cover`
+                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1941,7 +1958,7 @@ function App({ user, onSignOut }) {
                         fontSize: '20px',
                         flexShrink: 0
                       }}>
-                        {(user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
+                        {!user?.user_metadata?.avatar_url && (user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
@@ -2372,6 +2389,7 @@ function App({ user, onSignOut }) {
             console.log('Profile updated:', updatedData);
             setShowProfileSettings(false);
           }}
+          authFunctions={authFunctions}
         />
       )}
     </div>
