@@ -1901,8 +1901,9 @@ function App({ user, onSignOut }) {
                   <div style={{
                     position: 'absolute',
                     bottom: 'calc(100% + 8px)',
-                    right: '8px',
-                    width: '280px',
+                    left: 0,
+                    right: 0,
+                    margin: '0 8px',
                     background: isDarkMode ? '#2c2c2c' : '#ffffff',
                     border: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
                     borderRadius: '12px',
