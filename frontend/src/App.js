@@ -574,12 +574,12 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                 disabled={isLoading}
                 style={{
                   width: '100%',
-                  padding: '14px 24px',
+                  padding: '10px 20px',
                   background: '#19c37d',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   opacity: isLoading ? 0.6 : 1,
@@ -713,12 +713,12 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                 disabled={isLoading}
                 style={{
                   width: '100%',
-                  padding: '14px 24px',
+                  padding: '10px 20px',
                   background: '#19c37d',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  fontSize: '15px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   opacity: isLoading ? 0.6 : 1,
