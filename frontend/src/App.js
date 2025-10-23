@@ -370,7 +370,7 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
           </button>
         </div>
 
-        <div className="modal-body">
+        <div className="modal-body" style={{ padding: '24px' }}>
           {/* Tabs */}
           <div style={{
             display: 'flex',
@@ -525,7 +525,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                     color: isDarkMode ? '#e5e7eb' : '#1f2937',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#19c37d'}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
@@ -559,7 +560,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                     color: isDarkMode ? '#e5e7eb' : '#1f2937',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#19c37d'}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
@@ -582,7 +584,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   opacity: isLoading ? 0.6 : 1,
                   transition: 'all 0.2s',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
                 }}
                 onMouseEnter={(e) => {
                   if (!isLoading) e.target.style.background = '#15a771';
@@ -626,7 +629,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                     color: isDarkMode ? '#e5e7eb' : '#1f2937',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#19c37d'}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
@@ -660,7 +664,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                     color: isDarkMode ? '#e5e7eb' : '#1f2937',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#19c37d'}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
@@ -694,7 +699,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                     color: isDarkMode ? '#e5e7eb' : '#1f2937',
                     fontSize: '14px',
                     fontFamily: 'inherit',
-                    transition: 'border-color 0.2s'
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={(e) => e.target.style.borderColor = '#19c37d'}
                   onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
@@ -717,7 +723,8 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate }) => {
                   cursor: isLoading ? 'not-allowed' : 'pointer',
                   opacity: isLoading ? 0.6 : 1,
                   transition: 'all 0.2s',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
                 }}
                 onMouseEnter={(e) => {
                   if (!isLoading) e.target.style.background = '#15a771';
