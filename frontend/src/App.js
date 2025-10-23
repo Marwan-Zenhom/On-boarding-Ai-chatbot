@@ -1838,7 +1838,7 @@ function App({ user, onSignOut, authFunctions }) {
           </button>
           
           {!isSidebarCollapsed && user && (
-            <div className="user-section" style={{ position: 'relative', marginLeft: '-8px' }}>
+            <div className="user-section" style={{ position: 'relative', marginLeft: '-30px' }}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 style={{
