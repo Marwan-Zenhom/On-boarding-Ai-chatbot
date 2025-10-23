@@ -1838,11 +1838,11 @@ function App({ user, onSignOut, authFunctions }) {
           </button>
           
           {!isSidebarCollapsed && user && (
-            <div className="user-section" style={{ position: 'relative' }}>
+            <div className="user-section" style={{ position: 'relative', marginLeft: '-8px' }}>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 style={{
-                  width: '100%',
+                  width: 'calc(100% + 8px)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '12px',
