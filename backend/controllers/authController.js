@@ -1,4 +1,5 @@
 import { supabase } from '../config/database.js';
+import logger from '../config/logger.js';
 
 /**
  * Get current user profile
@@ -43,7 +44,7 @@ export const getProfile = async (req, res) => {
       profile
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    logger.error('Get profile error', { error: error.message, userId: req.user.id });
     res.status(500).json({
       success: false,
       error: 'Failed to get user profile',
@@ -81,7 +82,7 @@ export const updateProfile = async (req, res) => {
       message: 'Profile updated successfully'
     });
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Update profile error', { error: error.message, userId: req.user.id });
     res.status(500).json({
       success: false,
       error: 'Failed to update profile',
@@ -123,7 +124,7 @@ export const getUserStats = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.error('Get user stats error', { error: error.message, userId: req.user.id });
     res.status(500).json({
       success: false,
       error: 'Failed to get user statistics',
@@ -162,13 +163,15 @@ export const signup = async (req, res) => {
 
     if (error) throw error;
 
+    logger.logAuth('signup', data.user?.id, true, { email });
+
     res.status(201).json({
       success: true,
       message: 'User created successfully. Please check your email for verification.',
       user: data.user
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    logger.logAuth('signup', null, false, { email: req.body.email, error: error.message });
     res.status(400).json({
       success: false,
       error: 'Signup failed',
@@ -202,6 +205,8 @@ export const signin = async (req, res) => {
 
     if (error) throw error;
 
+    logger.logAuth('signin', data.user?.id, true, { email });
+
     res.json({
       success: true,
       message: 'Login successful',
@@ -209,7 +214,7 @@ export const signin = async (req, res) => {
       user: data.user
     });
   } catch (error) {
-    console.error('Signin error:', error);
+    logger.logAuth('signin', null, false, { email: req.body.email, error: error.message });
     res.status(401).json({
       success: false,
       error: 'Login failed',
@@ -227,12 +232,14 @@ export const signout = async (req, res) => {
 
     if (error) throw error;
 
+    logger.logAuth('signout', req.user?.id, true, {});
+
     res.json({
       success: true,
       message: 'Logged out successfully'
     });
   } catch (error) {
-    console.error('Signout error:', error);
+    logger.logAuth('signout', req.user?.id, false, { error: error.message });
     res.status(500).json({
       success: false,
       error: 'Logout failed',
@@ -240,5 +247,6 @@ export const signout = async (req, res) => {
     });
   }
 };
+
 
 

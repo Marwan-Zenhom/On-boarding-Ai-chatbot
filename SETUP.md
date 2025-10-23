@@ -49,7 +49,7 @@ cp env.example .env
 
 Edit `backend/.env`:
 ```env
-PORT=5000
+PORT=8000
 NODE_ENV=development
 
 # Get these from Supabase Dashboard > Settings > API
@@ -71,7 +71,7 @@ cp env.example .env.local
 
 Edit `frontend/.env.local`:
 ```env
-REACT_APP_API_URL=http://localhost:5000
+REACT_APP_API_URL=http://localhost:8000
 REACT_APP_SUPABASE_URL=https://your-project.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your_anon_key_here
 ```
@@ -142,7 +142,7 @@ CREATE POLICY "Allow all for single user" ON messages FOR ALL USING (true);
 npm run dev
 ```
 
-This will start both backend (port 5000) and frontend (port 3000) simultaneously.
+This will start both backend (port 8000) and frontend (port 3000) simultaneously.
 
 #### Option B: Run Separately
 ```bash
@@ -156,8 +156,8 @@ npm run dev:frontend
 ### 6. Access the Application
 
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **Health Check**: http://localhost:5000/api/health
+- **Backend API**: http://localhost:8000
+- **Health Check**: http://localhost:8000/api/health
 
 ## 🔧 Available Scripts
 
@@ -198,14 +198,14 @@ npm test                 # Run tests
 - Run the database setup SQL in Supabase SQL Editor
 
 #### 3. "Failed to get AI response"
-- Check that backend server is running on port 5000
-- Verify `REACT_APP_API_URL=http://localhost:5000` in frontend env
+- Check that backend server is running on port 8000
+- Verify `REACT_APP_API_URL=http://localhost:8000` in frontend env
 - Check browser console for CORS errors
 
 #### 4. Port already in use
 ```bash
-# Find and kill process on port 5000
-lsof -ti:5000 | xargs kill -9
+# Find and kill process on port 8000 (backend)
+lsof -ti:8000 | xargs kill -9
 
 # Find and kill process on port 3000
 lsof -ti:3000 | xargs kill -9

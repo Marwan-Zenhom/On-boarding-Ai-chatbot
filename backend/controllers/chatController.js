@@ -1,5 +1,6 @@
 import { generateResponse, generateStreamResponse } from '../services/geminiService.js';
 import { supabase } from '../config/database.js';
+import logger from '../config/logger.js';
 
 // POST /api/chat/message
 export const sendMessage = async (req, res) => {
@@ -114,7 +115,7 @@ export const sendMessage = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Chat error:', error);
+    logger.error('Chat error', { error: error.message, userId: req.user.id, conversationId: req.body.conversationId });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to process message'
@@ -211,7 +212,7 @@ export const regenerateResponse = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Regenerate error:', error);
+    logger.error('Regenerate error', { error: error.message, userId: req.user.id, conversationId: req.body.conversationId });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to regenerate response'
@@ -243,7 +244,7 @@ export const getConversations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error('Get conversations error', { error: error.message, userId: req.user.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to fetch conversations'
@@ -274,7 +275,7 @@ export const updateConversation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Update conversation error:', error);
+    logger.error('Update conversation error', { error: error.message, userId: req.user.id, conversationId: req.params.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to update conversation'
@@ -308,7 +309,7 @@ export const deleteConversation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Delete conversation error:', error);
+    logger.error('Delete conversation error', { error: error.message, userId: req.user.id, conversationId: req.params.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to delete conversation'

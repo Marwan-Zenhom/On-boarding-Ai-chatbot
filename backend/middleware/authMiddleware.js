@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import logger from '../config/logger.js';
 
 dotenv.config();
 
@@ -27,7 +28,7 @@ export const authenticateUser = async (req, res, next) => {
     const jwtSecret = process.env.SUPABASE_JWT_SECRET;
     
     if (!jwtSecret) {
-      console.error('SUPABASE_JWT_SECRET is not configured');
+      logger.error('SUPABASE_JWT_SECRET is not configured');
       return res.status(500).json({
         success: false,
         error: 'Server configuration error'
@@ -49,7 +50,7 @@ export const authenticateUser = async (req, res, next) => {
     // Proceed to next middleware/route handler
     next();
   } catch (error) {
-    console.error('Authentication error:', error.message);
+    logger.error('Authentication error', { error: error.message, path: req.originalUrl });
 
     // Handle specific JWT errors
     if (error.name === 'TokenExpiredError') {
@@ -137,5 +138,6 @@ export const requireRole = (...allowedRoles) => {
 };
 
 export default authenticateUser;
+
 
 
