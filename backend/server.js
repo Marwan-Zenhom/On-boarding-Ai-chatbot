@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import { ensureMainUser } from './config/database.js';
 import chatRoutes from './routes/chatRoutes.js';
@@ -23,6 +24,18 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Enable compression for all responses
+app.use(compression({
+  level: 6, // Compression level (0-9, 6 is default)
+  threshold: 1024, // Only compress responses larger than 1kb
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
 }));
 
 app.use(morgan('combined'));

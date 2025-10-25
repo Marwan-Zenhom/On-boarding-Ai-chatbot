@@ -1,261 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
-  Plus, ArrowUp, User, Bot, Sun, Moon, 
-  Edit3, Trash2, Search, Copy, Mic, MicOff, 
-  Heart, Archive, Sidebar,
-  ThumbsUp, ThumbsDown, RotateCcw, X, Check, Upload, 
-  FileText, Paperclip, MoreHorizontal, Square
+  Plus, ArrowUp, Bot, Sun, Moon, 
+  Search, Mic, MicOff, 
+  Archive, Sidebar, X,
+  FileText, Paperclip, Square
 } from 'lucide-react';
 import apiService from './services/apiService';
-
-// --- Custom Hooks ---
-const useLocalStorage = (key, initialValue) => {
-  const [storedValue, setStoredValue] = useState(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      return initialValue;
-    }
-  });
-
-  const setValue = (value) => {
-    try {
-      setStoredValue(value);
-      window.localStorage.setItem(key, JSON.stringify(value));
-    } catch (error) {
-      console.error('Error saving to localStorage:', error);
-    }
-  };
-
-  return [storedValue, setValue];
-};
-
-
-
-
-
-// --- File Upload Component ---
-const FileUpload = ({ onFileSelect, acceptedTypes = ".pdf,.docx,.txt,.csv,.json,.png,.jpg,.jpeg" }) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    onFileSelect(files);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    onFileSelect(files);
-  };
-
-  return (
-    <div
-      className={`file-upload-area ${isDragging ? 'dragging' : ''}`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onClick={() => fileInputRef.current?.click()}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept={acceptedTypes}
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-      <Upload className="icon" />
-      <div className="upload-text">
-        <span className="upload-primary">Drop files here or click to upload</span>
-        <span className="upload-secondary">Supports PDF, DOCX, TXT, CSV, JSON, Images</span>
-      </div>
-    </div>
-  );
-};
-
-// --- Archived Conversations Modal ---
-const ArchivedConversationsModal = ({ isOpen, onClose, conversations, onViewChat, onUnarchive, onDelete }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content archived-modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Archived Chats</h2>
-          <button onClick={onClose} className="modal-close">
-            <X className="icon" />
-          </button>
-        </div>
-        <div className="archived-modal-content">
-          {conversations.length === 0 ? (
-            <div className="empty-state">
-              <Archive className="empty-icon" />
-              <p>No archived conversations</p>
-              <span>Conversations you archive will appear here</span>
-            </div>
-          ) : (
-            <div className="archived-table">
-              <div className="archived-table-header">
-                <div className="archived-table-col-name">Name</div>
-                <div className="archived-table-col-date">Date created</div>
-                <div className="archived-table-col-actions"></div>
-              </div>
-              <div className="archived-table-body">
-                {conversations.map(conv => (
-                  <div key={conv.id} className="archived-table-row">
-                    <div className="archived-table-col-name">
-                      <button
-                        onClick={() => onViewChat(conv)}
-                        className="archived-chat-name"
-                        title="Click to view conversation"
-                      >
-                        {conv.title}
-                      </button>
-                    </div>
-                    <div className="archived-table-col-date">
-                      {new Date(conv.createdAt).toLocaleDateString()}
-                    </div>
-                    <div className="archived-table-col-actions">
-                      <button
-                        onClick={() => onUnarchive(conv.id)}
-                        className="archived-icon-btn"
-                        title="Unarchive conversation"
-                      >
-                        <Archive className="icon-sm" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(conv.id)}
-                        className="archived-icon-btn danger"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="icon-sm" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- Conversation Dropdown Component ---
-const ConversationDropdown = ({ conversation, isOpen, onClose, onFavourite, onArchive, onDelete, onRename }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="conversation-dropdown">
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRename();
-          onClose();
-        }}
-        className="dropdown-item"
-      >
-        <Edit3 className="icon-sm" />
-        <span>Rename</span>
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onFavourite();
-          onClose();
-        }}
-        className="dropdown-item"
-      >
-        <Heart className="icon-sm" />
-        <span>{conversation.isFavourite ? 'Remove from favourites' : 'Add to favourites'}</span>
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onArchive();
-          onClose();
-        }}
-        className="dropdown-item"
-      >
-        <Archive className="icon-sm" />
-        <span>Archive</span>
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-          onClose();
-        }}
-        className="dropdown-item danger"
-      >
-        <Trash2 className="icon-sm" />
-        <span>Delete</span>
-      </button>
-    </div>
-  );
-};
-
-// --- Utility Components ---
-const SkeletonLoader = () => (
-  <div className="skeleton-container">
-    <div className="skeleton skeleton-avatar"></div>
-    <div className="skeleton-content">
-      <div className="skeleton skeleton-line long"></div>
-      <div className="skeleton skeleton-line medium"></div>
-      <div className="skeleton skeleton-line short"></div>
-    </div>
-  </div>
-);
-
-const Toast = ({ message, type, onClose }) => (
-  <div className={`toast toast-${type}`}>
-    <span>{message}</span>
-    <button onClick={onClose} className="toast-close">
-      <X className="icon-sm" />
-    </button>
-  </div>
-);
-
-const MessageActions = ({ message, onCopy, onEdit, onReact, onRegenerate }) => (
-  <div className="message-actions">
-    <button className="action-btn" onClick={() => onCopy(message.content)} title="Copy message">
-      <Copy className="icon-sm" />
-    </button>
-    {message.role === 'assistant' && (
-      <>
-        <button className="action-btn" onClick={() => onReact(message.id, 'like')} title="Good response">
-          <ThumbsUp className="icon-sm" />
-        </button>
-        <button className="action-btn" onClick={() => onReact(message.id, 'dislike')} title="Poor response">
-          <ThumbsDown className="icon-sm" />
-        </button>
-        <button className="action-btn" onClick={() => onRegenerate(message.id)} title="Regenerate">
-          <RotateCcw className="icon-sm" />
-        </button>
-      </>
-    )}
-    {message.role === 'user' && (
-      <button className="action-btn" onClick={() => onEdit(message.id)} title="Edit message">
-        <Edit3 className="icon-sm" />
-      </button>
-    )}
-  </div>
-);
-
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { SUPPORTED_LANGUAGES } from './constants/languages';
+import FileUpload from './components/FileUpload';
+import ArchivedConversationsModal from './components/ArchivedConversationsModal';
+import ConversationItem from './components/ConversationItem';
+import Message from './components/Message';
+import { SkeletonLoader, Toast } from './components/UtilityComponents';
 // --- Main App Component ---
 export default function App() {
   // --- State Management ---
@@ -328,23 +85,6 @@ export default function App() {
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
-
-  // Supported languages for speech recognition
-  const supportedLanguages = [
-    { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
-    { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
-    { code: 'de-DE', name: 'German', flag: '🇩🇪' },
-    { code: 'fr-FR', name: 'French', flag: '🇫🇷' },
-    { code: 'es-ES', name: 'Spanish', flag: '🇪🇸' },
-    { code: 'it-IT', name: 'Italian', flag: '🇮🇹' },
-    { code: 'pt-PT', name: 'Portuguese', flag: '🇵🇹' },
-    { code: 'nl-NL', name: 'Dutch', flag: '🇳🇱' },
-    { code: 'ru-RU', name: 'Russian', flag: '🇷🇺' },
-    { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵' },
-    { code: 'ko-KR', name: 'Korean', flag: '🇰🇷' },
-    { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
-    { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦' }
-  ];
 
   // --- Memoized Values ---
   const filteredConversations = useMemo(() => {
@@ -520,7 +260,7 @@ export default function App() {
                 try { rec.stop(); } catch (e) {}
               });
               
-              const detectedLang = supportedLanguages.find(lang => lang.code === langCode);
+              const detectedLang = SUPPORTED_LANGUAGES.find(lang => lang.code === langCode);
               setDetectedLanguage(langCode);
               setSpeechLanguage(langCode);
               setInput(prev => prev + finalTranscript);
@@ -549,7 +289,7 @@ export default function App() {
         
         recognitionInstance.onstart = () => {
           setIsRecording(true);
-          const selectedLanguage = supportedLanguages.find(lang => lang.code === speechLanguage);
+          const selectedLanguage = SUPPORTED_LANGUAGES.find(lang => lang.code === speechLanguage);
           showToast(`Listening in ${selectedLanguage?.name || speechLanguage}... Speak now`, 'info');
         };
         
@@ -596,7 +336,7 @@ export default function App() {
         setRecognition(recognitionInstance);
       }
     }
-  }, [showToast, speechLanguage, supportedLanguages, autoDetectLanguage]);
+  }, [showToast, speechLanguage, autoDetectLanguage]);
 
   const typeMessage = useCallback((messageId, content) => {
     setTypingMessageId(messageId);
@@ -1086,12 +826,12 @@ export default function App() {
     }
   };
 
-  const handleLanguageSelect = (languageCode) => {
+  const handleLanguageSelect = useCallback((languageCode) => {
     setSpeechLanguage(languageCode);
     setShowLanguageSelector(false);
-    const selectedLanguage = supportedLanguages.find(lang => lang.code === languageCode);
+    const selectedLanguage = SUPPORTED_LANGUAGES.find(lang => lang.code === languageCode);
     showToast(`Speech language changed to ${selectedLanguage?.name || languageCode}`);
-  };
+  }, [showToast]);
 
   const stopGeneration = () => {
     if (generationTimeoutId) {
@@ -1139,51 +879,40 @@ export default function App() {
     }
   };
 
-  const renderConversationItem = (conv) => (
-    <div 
-      key={conv.id} 
-      className={`conversation-item ${currentConversationId === conv.id ? 'active' : ''} ${conv.is_favourite ? 'favourite' : ''}`}
+  const renderConversationItem = useCallback((conv) => (
+    <ConversationItem
+      key={conv.id}
+      conv={conv}
+      isActive={currentConversationId === conv.id}
+      isRenaming={renamingConversationId === conv.id}
+      renamingText={renamingText}
+      setRenamingText={setRenamingText}
+      saveRename={saveRename}
+      cancelRename={cancelRename}
       onClick={() => handleConversationClick(conv)}
-    >
-      {renamingConversationId === conv.id ? (
-        <div className="rename-input-container">
-          <input
-            type="text"
-            value={renamingText}
-            onChange={(e) => setRenamingText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveRename();
-              if (e.key === 'Escape') cancelRename();
-            }}
-            onBlur={saveRename}
-            autoFocus
-            className="rename-input"
-          />
-        </div>
-      ) : (
-        <span className="conversation-text">{conv.title}</span>
-      )}
-      {conv.is_favourite && <Heart className="favourite-icon" />}
-      <div className="conversation-actions">
-        <button 
-          className="dropdown-toggle"
-          onClick={(e) => toggleDropdown(conv.id, e)}
-          title="More options"
-        >
-          <MoreHorizontal className="icon-sm" />
-        </button>
-        <ConversationDropdown
-          conversation={conv}
-          isOpen={openDropdownId === conv.id}
-          onClose={closeDropdown}
-          onFavourite={() => toggleConversationFavourite(conv.id, { stopPropagation: () => {} })}
-          onArchive={() => archiveConversation(conv.id, { stopPropagation: () => {} })}
-          onDelete={() => deleteConversation(conv.id, { stopPropagation: () => {} })}
-          onRename={() => startRenaming(conv.id)}
-        />
-      </div>
-    </div>
-  );
+      openDropdownId={openDropdownId}
+      toggleDropdown={toggleDropdown}
+      closeDropdown={closeDropdown}
+      toggleConversationFavourite={toggleConversationFavourite}
+      archiveConversation={archiveConversation}
+      deleteConversation={deleteConversation}
+      startRenaming={startRenaming}
+    />
+  ), [
+    currentConversationId, 
+    renamingConversationId, 
+    renamingText, 
+    openDropdownId,
+    handleConversationClick,
+    saveRename,
+    cancelRename,
+    toggleDropdown,
+    closeDropdown,
+    toggleConversationFavourite,
+    archiveConversation,
+    deleteConversation,
+    startRenaming
+  ]);
 
   // If in test mode, show the database test component
   // Test mode removed - now using proper backend API architecture
@@ -1393,81 +1122,21 @@ export default function App() {
           ) : (
             <div className="chat-messages">
               {messages.map((msg, index) => (
-                <div key={msg.id || index} className={`message ${msg.role}`}>
-                  <div className="message-avatar">
-                    {msg.role === 'user' ? (
-                      <div className="avatar user-avatar-chat">
-                        <User className="icon" />
-                      </div>
-                    ) : (
-                      <div className="avatar assistant-avatar">
-                        <Bot className="icon" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="message-content">
-                    {editingMessageId === msg.id ? (
-                      <div className="edit-container">
-                        <textarea
-                          value={editingText}
-                          onChange={(e) => setEditingText(e.target.value)}
-                          className="edit-textarea"
-                          autoFocus
-                        />
-                        <div className="edit-actions">
-                          <button onClick={saveMessageEdit} className="edit-save">
-                            <Check className="icon-sm" /> Save
-                          </button>
-                          <button onClick={() => setEditingMessageId(null)} className="edit-cancel">
-                            <X className="icon-sm" /> Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="message-text">
-                          {msg.role === 'assistant' && displayedContent[msg.id] !== undefined
-                            ? displayedContent[msg.id]
-                            : msg.content}
-                          {typingMessageId === msg.id && (
-                            <span className="typing-cursor">|</span>
-                          )}
-                          {msg.isEdited && <span className="edited-indicator">(edited)</span>}
-                          {msg.reaction && (
-                            <span className={`reaction ${msg.reaction}`}>
-                              {msg.reaction === 'like' ? '👍' : '👎'}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {msg.files && (
-                          <div className="message-files">
-                            {msg.files.map(file => (
-                              <div key={file.id} className="file-attachment">
-                                <FileText className="icon-sm" />
-                                <span>{file.name}</span>
-                                <span className="file-size">({(file.size / 1024).toFixed(1)} KB)</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        
-                        <div className="message-meta">
-                          <div className="message-time">
-                            {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                          </div>
-                          <MessageActions
-                            message={msg}
-                            onCopy={copyToClipboard}
-                            onEdit={handleMessageEdit}
-                            onReact={handleMessageReaction}
-                            onRegenerate={regenerateResponse}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <Message
+                  key={msg.id || index}
+                  msg={msg}
+                  editingMessageId={editingMessageId}
+                  editingText={editingText}
+                  setEditingText={setEditingText}
+                  saveMessageEdit={saveMessageEdit}
+                  setEditingMessageId={setEditingMessageId}
+                  displayedContent={displayedContent}
+                  typingMessageId={typingMessageId}
+                  copyToClipboard={copyToClipboard}
+                  handleMessageEdit={handleMessageEdit}
+                  handleMessageReaction={handleMessageReaction}
+                  regenerateResponse={regenerateResponse}
+                />
               ))}
               
               {isLoading && (
@@ -1551,7 +1220,7 @@ export default function App() {
                         className="language-toggle"
                         title={autoDetectLanguage ? "Auto-detecting language" : "Select speech language"}
                       >
-                        {autoDetectLanguage ? '🌐' : (supportedLanguages.find(lang => lang.code === speechLanguage)?.flag || '🌐')}
+                        {autoDetectLanguage ? '🌐' : (SUPPORTED_LANGUAGES.find(lang => lang.code === speechLanguage)?.flag || '🌐')}
                       </button>
                       
                       {showLanguageSelector && (
@@ -1575,17 +1244,17 @@ export default function App() {
                             <div className="detected-language">
                               <span className="detected-label">Last detected:</span>
                               <span className="detected-flag">
-                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.flag}
+                                {SUPPORTED_LANGUAGES.find(lang => lang.code === detectedLanguage)?.flag}
                               </span>
                               <span className="detected-name">
-                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.name}
+                                {SUPPORTED_LANGUAGES.find(lang => lang.code === detectedLanguage)?.name}
                               </span>
                             </div>
                           )}
                           
                           {!autoDetectLanguage && (
                             <>
-                              {supportedLanguages.map(language => (
+                              {SUPPORTED_LANGUAGES.map(language => (
                                 <button
                                   key={language.code}
                                   onClick={() => handleLanguageSelect(language.code)}

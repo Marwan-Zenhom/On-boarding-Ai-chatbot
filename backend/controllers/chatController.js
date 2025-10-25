@@ -208,22 +208,45 @@ export const regenerateResponse = async (req, res) => {
 // GET /api/chat/conversations
 export const getConversations = async (req, res) => {
   try {
-    const { data: conversations, error } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        messages (*)
-      `)
-      .eq('user_id', FIXED_USER_ID)
-      .order('created_at', { ascending: false });
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
 
-    if (error) {
-      throw new Error(`Failed to fetch conversations: ${error.message}`);
+    // Optimized query: Only fetch conversations without ALL messages
+    // Messages will be loaded when a conversation is selected
+    const { data: conversations, error: convError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('user_id', FIXED_USER_ID)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (convError) {
+      throw new Error(`Failed to fetch conversations: ${convError.message}`);
     }
 
+    // For each conversation, fetch only the first message for preview
+    const conversationsWithMessages = await Promise.all(
+      (conversations || []).map(async (conv) => {
+        const { data: messages } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conv.id)
+          .order('timestamp', { ascending: true })
+          .limit(2); // Only fetch first 2 messages for preview
+        
+        return {
+          ...conv,
+          messages: messages || []
+        };
+      })
+    );
+
+    // Set cache headers for better performance
+    res.set('Cache-Control', 'private, max-age=10');
+    
     res.json({
       success: true,
-      conversations: conversations || []
+      conversations: conversationsWithMessages
     });
 
   } catch (error) {
@@ -261,6 +284,54 @@ export const updateConversation = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to update conversation'
+    });
+  }
+};
+
+// GET /api/chat/conversations/:id - Get single conversation with all messages
+export const getConversationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch conversation
+    const { data: conversation, error: convError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', FIXED_USER_ID)
+      .single();
+
+    if (convError) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Conversation not found' 
+      });
+    }
+
+    // Fetch all messages for this conversation
+    const { data: messages, error: msgError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', id)
+      .order('timestamp', { ascending: true });
+
+    if (msgError) {
+      throw new Error(`Failed to fetch messages: ${msgError.message}`);
+    }
+
+    res.json({
+      success: true,
+      conversation: {
+        ...conversation,
+        messages: messages || []
+      }
+    });
+
+  } catch (error) {
+    console.error('Get conversation by ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to fetch conversation'
     });
   }
 };

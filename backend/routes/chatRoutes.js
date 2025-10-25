@@ -1,5 +1,5 @@
 import express from 'express';
-import { sendMessage, regenerateResponse, getConversations, updateConversation, deleteConversation } from '../controllers/chatController.js';
+import { sendMessage, regenerateResponse, getConversations, getConversationById, updateConversation, deleteConversation } from '../controllers/chatController.js';
 
 const router = express.Router();
 
@@ -7,6 +7,7 @@ const router = express.Router();
 router.post('/message', sendMessage);
 router.post('/regenerate', regenerateResponse);
 router.get('/conversations', getConversations);
+router.get('/conversations/:id', getConversationById);
 router.put('/conversations/:id', updateConversation);
 router.delete('/conversations/:id', deleteConversation);
 
