@@ -1,4 +1,4 @@
-import { supabase } from '../config/database.js';
+import { supabase, supabaseAdmin } from '../config/database.js';
 import csv from 'csv-parser';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -107,8 +107,8 @@ export async function processCSVFile(filePath, category) {
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             
-            // Save to database - Supabase handles vector conversion
-            const { error } = await supabase.from('knowledge_base').insert({
+            // Save to database - use admin client to bypass RLS
+            const { error } = await supabaseAdmin.from('knowledge_base').insert({
               category,
               content,
               metadata: row,

@@ -63,3 +63,10 @@ SELECT
 FROM storage.buckets 
 WHERE id = 'avatars';
 
+
+
+
+
+
+
+

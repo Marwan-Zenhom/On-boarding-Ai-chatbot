@@ -1,4 +1,5 @@
 import { generateResponse, generateStreamResponse } from '../services/geminiService.js';
+import { AIAgent } from '../services/agentService.js';
 import { supabase } from '../config/database.js';
 import logger from '../config/logger.js';
 
@@ -42,9 +43,6 @@ export const sendMessage = async (req, res) => {
       conversationHistory = messages || [];
     }
 
-    // Generate AI response using Gemini
-    const aiResponse = await generateResponse(message.trim(), conversationHistory);
-
     // Create conversation if it doesn't exist
     let currentConversationId = conversationId;
     if (!currentConversationId) {
@@ -70,6 +68,47 @@ export const sendMessage = async (req, res) => {
       currentConversationId = newConversation.id;
     }
 
+    // Try to use AI Agent, fallback to old service if agent not set up yet
+    let agentResponse;
+    try {
+      const agent = new AIAgent(userId, currentConversationId);
+      agentResponse = await agent.processRequest(message.trim(), conversationHistory);
+    } catch (agentError) {
+      // Agent might fail if tables don't exist yet - fallback to old service
+      logger.warn('Agent failed, falling back to old Gemini service', { error: agentError.message });
+      const oldResponse = await generateResponse(message.trim(), conversationHistory);
+      agentResponse = {
+        success: oldResponse.success,
+        content: oldResponse.content,
+        requiresApproval: false,
+        executedActions: []
+      };
+    }
+
+    // Check if agent needs approval
+    if (agentResponse.requiresApproval) {
+      // Save user message only
+      await supabase
+        .from('messages')
+        .insert([{
+          conversation_id: currentConversationId,
+          role: 'user',
+          content: message.trim(),
+          timestamp: new Date().toISOString(),
+          files: files || null
+        }]);
+
+      // Return response with pending actions
+      return res.json({
+        success: true,
+        conversationId: currentConversationId,
+        requiresApproval: true,
+        pendingActions: agentResponse.pendingActions,
+        content: agentResponse.content,
+        executedActions: agentResponse.executedActions || []
+      });
+    }
+
     // Save both user message and AI response to database
     const messagesToInsert = [
       {
@@ -82,7 +121,7 @@ export const sendMessage = async (req, res) => {
       {
         conversation_id: currentConversationId,
         role: 'assistant',
-        content: aiResponse.content,
+        content: agentResponse.content,
         timestamp: new Date().toISOString(),
         files: null
       }
@@ -108,10 +147,11 @@ export const sendMessage = async (req, res) => {
       },
       aiResponse: {
         role: 'assistant',
-        content: aiResponse.content,
+        content: agentResponse.content,
         timestamp: messagesToInsert[1].timestamp,
-        model: aiResponse.model
-      }
+        model: 'ai-agent'
+      },
+      executedActions: agentResponse.executedActions || []
     });
 
   } catch (error) {

@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit';
 import { ensureMainUser } from './config/database.js';
 import chatRoutes from './routes/chatRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
+import googleAuthRoutes from './routes/googleAuthRoutes.js';
 import logger from './config/logger.js';
 
 // Load environment variables
@@ -72,6 +74,8 @@ app.use('/api/', limiter);
 // Routes (auth routes get stricter rate limiting)
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/agent', agentRoutes);
+app.use('/api/google-auth', googleAuthRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -79,7 +83,13 @@ app.get('/api/health', (req, res) => {
     success: true, 
     message: 'Onboarding Chat Backend is running!',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    features: {
+      chat: true,
+      authentication: true,
+      aiAgent: true,
+      googleIntegration: !!process.env.GOOGLE_CLIENT_ID
+    }
   });
 });
 
@@ -121,6 +131,8 @@ const startServer = async () => {
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Database: ${process.env.SUPABASE_URL ? 'Connected ✅' : 'Not configured ❌'}`);
       logger.info(`Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured ✅' : 'Not configured ❌'}`);
+      logger.info(`Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured ✅' : 'Not configured ⚠️'}`);
+      logger.info(`AI Agent: Enabled ✅`);
       logger.info('='.repeat(50));
     });
   } catch (error) {

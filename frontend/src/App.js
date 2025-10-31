@@ -10,6 +10,8 @@ import {
   Mail, Lock, Camera
 } from 'lucide-react';
 import apiService from './services/apiService';
+import GoogleConnectionSettings from './components/GoogleConnectionSettings';
+import ActionApprovalModal from './components/ActionApprovalModal';
 
 // --- Custom Hooks ---
 const useLocalStorage = (key, initialValue) => {
@@ -424,6 +426,24 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate, authFunctio
             >
               Security
             </button>
+            <button
+              onClick={() => setActiveTab('google')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'google' ? `2px solid #19c37d` : 'none',
+                color: activeTab === 'google' ? '#19c37d' : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                fontWeight: activeTab === 'google' ? '600' : '400',
+                cursor: 'pointer',
+                fontSize: '15px',
+                marginBottom: '-2px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Google Account
+            </button>
           </div>
 
           {/* Error/Success Messages */}
@@ -746,10 +766,17 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate, authFunctio
                   e.target.style.background = '#19c37d';
                 }}
               >
-                {isLoading ? 'Updating...' : 'Update Password'}
-              </button>
-            </form>
-          )}
+              {isLoading ? 'Updating...' : 'Update Password'}
+            </button>
+          </form>
+        )}
+
+        {/* Google Account Tab */}
+        {activeTab === 'google' && (
+          <GoogleConnectionSettings 
+            apiUrl={process.env.REACT_APP_API_URL || 'http://localhost:8000'}
+          />
+        )}
         </div>
       </div>
     </div>
@@ -792,6 +819,8 @@ function App({ user, onSignOut, authFunctions }) {
   const [editingText, setEditingText] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [pendingActions, setPendingActions] = useState([]);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState(null);
   const [displayedContent, setDisplayedContent] = useState({});
@@ -1470,26 +1499,52 @@ function App({ user, onSignOut, authFunctions }) {
           setCurrentConversationId(response.conversationId);
         }
 
-        // Add AI response to UI
-        const botResponseId = Date.now().toString();
-        const botMessage = {
-          id: botResponseId,
-          role: 'assistant',
-          content: response.aiResponse.content,
-          timestamp: response.aiResponse.timestamp,
-          reaction: null,
-          isEdited: false,
-          model: response.aiResponse.model
-        };
+        // Check if approval is required (can be at top level or nested in aiResponse)
+        const requiresApproval = response.requiresApproval || (response.aiResponse && response.aiResponse.requiresApproval);
+        const pendingActions = response.pendingActions || (response.aiResponse && response.aiResponse.pendingActions);
+        const content = response.content || (response.aiResponse && response.aiResponse.content);
+        const timestamp = response.timestamp || (response.aiResponse && response.aiResponse.timestamp) || new Date().toISOString();
 
-        setMessages(prev => [...prev, botMessage]);
-        
-        // Start typing animation
-        setTimeout(() => {
-          typeMessage(botResponseId, response.aiResponse.content);
-        }, 100);
+        if (requiresApproval && pendingActions) {
+          // Add AI message asking for approval
+          const botResponseId = Date.now().toString();
+          const botMessage = {
+            id: botResponseId,
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            reaction: null,
+            isEdited: false
+          };
 
-        showToast('Response generated successfully!');
+          setMessages(prev => [...prev, botMessage]);
+          
+          // Store pending actions and show approval modal
+          setPendingActions(pendingActions);
+          setShowApprovalModal(true);
+          
+          showToast('🔔 Action approval required');
+        } else {
+          // Add AI response to UI
+          const botResponseId = Date.now().toString();
+          const botMessage = {
+            id: botResponseId,
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            reaction: null,
+            isEdited: false
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+          
+          // Start typing animation
+          setTimeout(() => {
+            typeMessage(botResponseId, content);
+          }, 100);
+
+          showToast('Response generated successfully!');
+        }
       } else {
         throw new Error(response.error || 'Failed to get AI response');
       }
@@ -1517,6 +1572,79 @@ function App({ user, onSignOut, authFunctions }) {
       setTypingMessageId(null);
       typingTimeoutIds.forEach(timeoutId => clearTimeout(timeoutId));
       setTypingTimeoutIds([]);
+    }
+  };
+
+  const handleApproveActions = async (actionIds) => {
+    try {
+      setShowApprovalModal(false);
+      setIsLoading(true);
+      showToast('Executing approved actions...', 'info');
+
+      const response = await apiService.request('/api/agent/actions/approve', {
+        method: 'POST',
+        body: JSON.stringify({
+          actionIds: actionIds,
+          conversationId: currentConversationId
+        })
+      });
+
+      if (response.success) {
+        // Add success message to chat
+        const botResponseId = Date.now().toString();
+        const botMessage = {
+          id: botResponseId,
+          role: 'assistant',
+          content: response.summary,
+          timestamp: new Date().toISOString(),
+          reaction: null,
+          isEdited: false
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        setPendingActions([]);
+        showToast('✅ Actions executed successfully!');
+      } else {
+        throw new Error(response.error || 'Failed to execute actions');
+      }
+    } catch (error) {
+      console.error('Failed to approve actions:', error);
+      showToast('Failed to execute actions. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRejectActions = async () => {
+    try {
+      setShowApprovalModal(false);
+      
+      if (pendingActions.length > 0) {
+        const actionIds = pendingActions.map(a => a.actionId);
+        await apiService.request('/api/agent/actions/reject', {
+          method: 'POST',
+          body: JSON.stringify({ actionIds })
+        });
+      }
+
+      setPendingActions([]);
+      showToast('Actions cancelled');
+
+      // Add cancellation message to chat
+      const botResponseId = Date.now().toString();
+      const botMessage = {
+        id: botResponseId,
+        role: 'assistant',
+        content: 'Actions cancelled. How else can I help you?',
+        timestamp: new Date().toISOString(),
+        reaction: null,
+        isEdited: false
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Failed to reject actions:', error);
+      showToast('Failed to cancel actions', 'error');
     }
   };
 
@@ -2392,6 +2520,15 @@ function App({ user, onSignOut, authFunctions }) {
           authFunctions={authFunctions}
         />
       )}
+
+      {/* Action Approval Modal */}
+      <ActionApprovalModal
+        actions={pendingActions}
+        isOpen={showApprovalModal}
+        onApprove={handleApproveActions}
+        onReject={handleRejectActions}
+        onClose={() => setShowApprovalModal(false)}
+      />
     </div>
   );
 }

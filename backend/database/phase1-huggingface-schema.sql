@@ -56,3 +56,4 @@ WHERE table_name = 'knowledge_base' AND column_name = 'embedding';
 
 
 
+
