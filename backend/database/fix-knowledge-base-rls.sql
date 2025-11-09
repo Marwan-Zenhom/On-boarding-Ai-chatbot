@@ -29,3 +29,5 @@ ALTER TABLE knowledge_base ENABLE ROW LEVEL SECURITY;
 
 
 
+
+

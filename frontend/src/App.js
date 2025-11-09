@@ -7,7 +7,7 @@ import {
   Heart, Archive, Sidebar, LogOut,
   ThumbsUp, ThumbsDown, RotateCcw, X, Check, Upload, 
   FileText, Paperclip, MoreHorizontal, Square, Settings,
-  Mail, Lock, Camera
+  Mail, Lock, Camera, CheckCircle, XCircle, Calendar
 } from 'lucide-react';
 import apiService from './services/apiService';
 import GoogleConnectionSettings from './components/GoogleConnectionSettings';
@@ -860,8 +860,8 @@ function App({ user, onSignOut, authFunctions }) {
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  // Supported languages for speech recognition
-  const supportedLanguages = [
+  // Supported languages for speech recognition (memoized to prevent infinite loops)
+  const supportedLanguages = useMemo(() => [
     { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
     { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
     { code: 'de-DE', name: 'German', flag: '🇩🇪' },
@@ -875,7 +875,7 @@ function App({ user, onSignOut, authFunctions }) {
     { code: 'ko-KR', name: 'Korean', flag: '🇰🇷' },
     { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
     { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦' }
-  ];
+  ], []); // Empty dependency array - this array never changes
 
   // --- Memoized Values ---
   const filteredConversations = useMemo(() => {
@@ -1495,8 +1495,19 @@ function App({ user, onSignOut, authFunctions }) {
       
       if (response.success) {
         // Update conversation ID if this was a new conversation
-        if (!currentConversationId && response.conversationId) {
+        const isNewConversation = !currentConversationId && response.conversationId;
+        if (isNewConversation) {
           setCurrentConversationId(response.conversationId);
+        }
+
+        // Reload conversations list to show new conversation or updated titles
+        try {
+          const conversationsResponse = await apiService.getConversations();
+          if (conversationsResponse.success) {
+            setPastConversations(conversationsResponse.conversations);
+          }
+        } catch (error) {
+          console.error('Failed to reload conversations:', error);
         }
 
         // Check if approval is required (can be at top level or nested in aiResponse)
@@ -1543,6 +1554,27 @@ function App({ user, onSignOut, authFunctions }) {
             typeMessage(botResponseId, content);
           }, 100);
 
+          // Check if there are executed actions (like calendar bookings) and show confirmation
+          const executedActions = response.executedActions || [];
+          if (executedActions.length > 0) {
+            const calendarBookings = executedActions.filter(
+              action => action.tool === 'book_calendar_event' && action.status === 'executed'
+            );
+            
+            if (calendarBookings.length > 0) {
+              // Show confirmation for calendar bookings
+              calendarBookings.forEach(booking => {
+                if (booking.result?.data?.htmlLink) {
+                  showToast(
+                    `✅ Calendar event booked! View it on Google Calendar`,
+                    'success',
+                    5000
+                  );
+                }
+              });
+            }
+          }
+          
           showToast('Response generated successfully!');
         }
       } else {
@@ -1590,15 +1622,49 @@ function App({ user, onSignOut, authFunctions }) {
       });
 
       if (response.success) {
-        // Add success message to chat
+        // Format the execution confirmation message with enhanced UI
         const botResponseId = Date.now().toString();
+        
+        // Parse the results to create a better formatted message
+        const results = response.results || [];
+        const hasCalendarBooking = results.some(r => 
+          r.success && r.result?.data?.htmlLink
+        );
+        
+        // Create enhanced content with better formatting
+        let enhancedContent = `**Actions Executed:**\n\n`;
+        
+        results.forEach((result, index) => {
+          if (result.success) {
+            enhancedContent += `✅ **${result.description || 'Action'}**\n`;
+            if (result.result?.data?.htmlLink) {
+              enhancedContent += `📅 [View on Google Calendar](${result.result.data.htmlLink})\n`;
+            }
+            if (result.result?.summary) {
+              enhancedContent += `${result.result.summary}\n`;
+            }
+          } else {
+            enhancedContent += `❌ **${result.description || 'Action'}**: ${result.error}\n`;
+          }
+          if (index < results.length - 1) enhancedContent += `\n`;
+        });
+        
+        enhancedContent += `\n---\n\n`;
+        if (response.successCount === response.totalCount) {
+          enhancedContent += `🎉 **All actions completed successfully!**`;
+        } else {
+          enhancedContent += `⚠️ ${response.successCount}/${response.totalCount} actions completed.`;
+        }
+        
         const botMessage = {
           id: botResponseId,
           role: 'assistant',
-          content: response.summary,
+          content: enhancedContent,
           timestamp: new Date().toISOString(),
           reaction: null,
-          isEdited: false
+          isEdited: false,
+          isExecutionConfirmation: true, // Flag for special styling
+          executionResults: results
         };
 
         setMessages(prev => [...prev, botMessage]);
@@ -2270,33 +2336,95 @@ function App({ user, onSignOut, authFunctions }) {
                       </div>
                     ) : (
                       <>
-                        <div className="message-text">
+                        <div className={`message-text ${msg.isExecutionConfirmation ? 'execution-confirmation' : ''}`}>
                           {msg.role === 'assistant' ? (
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                // Custom styling for markdown elements
-                                p: ({node, ...props}) => <p style={{marginBottom: '0.8em'}} {...props} />,
-                                strong: ({node, ...props}) => <strong style={{fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
-                                ul: ({node, ...props}) => <ul style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
-                                ol: ({node, ...props}) => <ol style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
-                                li: ({node, ...props}) => <li style={{marginBottom: '0.4em'}} {...props} />,
-                                // eslint-disable-next-line jsx-a11y/heading-has-content
-                                h1: ({node, ...props}) => <h1 style={{fontSize: '1.4em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
-                                // eslint-disable-next-line jsx-a11y/heading-has-content
-                                h2: ({node, ...props}) => <h2 style={{fontSize: '1.2em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
-                                // eslint-disable-next-line jsx-a11y/heading-has-content
-                                h3: ({node, ...props}) => <h3 style={{fontSize: '1.1em', fontWeight: 600, marginBottom: '0.4em'}} {...props} />,
-                                code: ({node, inline, ...props}) => 
-                                  inline 
-                                    ? <code style={{background: 'var(--surface-secondary)', padding: '0.2em 0.4em', borderRadius: '3px', fontSize: '0.9em'}} {...props} />
-                                    : <code style={{display: 'block', background: 'var(--surface-secondary)', padding: '1em', borderRadius: '6px', overflow: 'auto', fontSize: '0.9em'}} {...props} />
-                              }}
-                            >
-                              {displayedContent[msg.id] !== undefined
-                                ? displayedContent[msg.id]
-                                : msg.content}
-                            </ReactMarkdown>
+                            msg.isExecutionConfirmation ? (
+                              // Special rendering for execution confirmation messages
+                              <div className="execution-confirmation-card">
+                                <div className="execution-header">
+                                  <div className="execution-icon">
+                                    <CheckCircle size={24} style={{ color: '#10b981' }} />
+                                  </div>
+                                  <h3 className="execution-title">Actions Executed</h3>
+                                </div>
+                                
+                                <div className="execution-actions">
+                                  {msg.executionResults?.map((result, index) => (
+                                    <div key={index} className={`execution-action-item ${result.success ? 'success' : 'error'}`}>
+                                      <div className="action-status">
+                                        {result.success ? (
+                                          <CheckCircle size={20} style={{ color: '#10b981' }} />
+                                        ) : (
+                                          <XCircle size={20} style={{ color: '#ef4444' }} />
+                                        )}
+                                      </div>
+                                      <div className="action-content">
+                                        <div className="action-title">{result.description || 'Action'}</div>
+                                        {result.success && result.result?.summary && (
+                                          <div className="action-summary">{result.result.summary}</div>
+                                        )}
+                                        {result.success && result.result?.data?.htmlLink && (
+                                          <a 
+                                            href={result.result.data.htmlLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="action-link"
+                                          >
+                                            <Calendar size={16} />
+                                            View on Google Calendar
+                                          </a>
+                                        )}
+                                        {!result.success && (
+                                          <div className="action-error">Error: {result.error}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                <div className="execution-footer">
+                                  {msg.executionResults?.every(r => r.success) ? (
+                                    <div className="execution-success-message">
+                                      <span className="success-emoji">🎉</span>
+                                      <span className="success-text">All actions completed successfully!</span>
+                                    </div>
+                                  ) : (
+                                    <div className="execution-warning-message">
+                                      <span className="warning-emoji">⚠️</span>
+                                      <span className="warning-text">
+                                        {msg.executionResults?.filter(r => r.success).length}/{msg.executionResults?.length} actions completed
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  // Custom styling for markdown elements
+                                  p: ({node, ...props}) => <p style={{marginBottom: '0.8em'}} {...props} />,
+                                  strong: ({node, ...props}) => <strong style={{fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
+                                  ul: ({node, ...props}) => <ul style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                  ol: ({node, ...props}) => <ol style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                  li: ({node, ...props}) => <li style={{marginBottom: '0.4em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h1: ({node, ...props}) => <h1 style={{fontSize: '1.4em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h2: ({node, ...props}) => <h2 style={{fontSize: '1.2em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h3: ({node, ...props}) => <h3 style={{fontSize: '1.1em', fontWeight: 600, marginBottom: '0.4em'}} {...props} />,
+                                  code: ({node, inline, ...props}) => 
+                                    inline 
+                                      ? <code style={{background: 'var(--surface-secondary)', padding: '0.2em 0.4em', borderRadius: '3px', fontSize: '0.9em'}} {...props} />
+                                      : <code style={{display: 'block', background: 'var(--surface-secondary)', padding: '1em', borderRadius: '6px', overflow: 'auto', fontSize: '0.9em'}} {...props} />
+                                }}
+                              >
+                                {displayedContent[msg.id] !== undefined
+                                  ? displayedContent[msg.id]
+                                  : msg.content}
+                              </ReactMarkdown>
+                            )
                           ) : (
                             <>
                               {msg.content}

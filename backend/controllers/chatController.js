@@ -1,6 +1,6 @@
 import { generateResponse, generateStreamResponse } from '../services/geminiService.js';
 import { AIAgent } from '../services/agentService.js';
-import { supabase } from '../config/database.js';
+import { supabase, supabaseAdmin } from '../config/database.js';
 import logger from '../config/logger.js';
 
 // POST /api/chat/message
@@ -20,7 +20,7 @@ export const sendMessage = async (req, res) => {
     let conversationHistory = [];
     if (conversationId) {
       // Verify user owns this conversation
-      const { data: conversation } = await supabase
+      const { data: conversation } = await supabaseAdmin
         .from('conversations')
         .select('id')
         .eq('id', conversationId)
@@ -34,7 +34,7 @@ export const sendMessage = async (req, res) => {
         });
       }
 
-      const { data: messages } = await supabase
+      const { data: messages } = await supabaseAdmin
         .from('messages')
         .select('role, content')
         .eq('conversation_id', conversationId)
@@ -50,10 +50,10 @@ export const sendMessage = async (req, res) => {
         ? message.substring(0, 30) + '...' 
         : message;
       
-      const { data: newConversation, error: convError } = await supabase
+      const { data: newConversation, error: convError } = await supabaseAdmin
         .from('conversations')
         .insert([{
-          user_id: userId, // Use authenticated user ID
+          user_id: userId, // Use authenticated user ID from auth.users
           title,
           is_favourite: false,
           is_archived: false
@@ -62,6 +62,27 @@ export const sendMessage = async (req, res) => {
         .single();
 
       if (convError) {
+        logger.error('Failed to create conversation', { 
+          userId, 
+          error: convError.message,
+          code: convError.code,
+          hint: convError.hint
+        });
+        
+        // Provide more helpful error message for foreign key violation
+        if (convError.code === '23503') { // Foreign key violation
+          // Check if user exists in auth.users using a simple query
+          const { data: userCheck } = await supabaseAdmin.rpc('check_user_exists', { user_uuid: userId })
+            .catch(() => ({ data: null }));
+          
+          return res.status(400).json({
+            success: false,
+            error: 'User account issue',
+            message: 'Your user account is not properly set up in the database. This usually happens after restoring from a backup. Please try logging out and logging back in, or contact support.',
+            details: `User ID: ${userId}. The user may not exist in auth.users table.`
+          });
+        }
+        
         throw new Error(`Failed to create conversation: ${convError.message}`);
       }
 
@@ -88,7 +109,7 @@ export const sendMessage = async (req, res) => {
     // Check if agent needs approval
     if (agentResponse.requiresApproval) {
       // Save user message only
-      await supabase
+      await supabaseAdmin
         .from('messages')
         .insert([{
           conversation_id: currentConversationId,
@@ -127,7 +148,7 @@ export const sendMessage = async (req, res) => {
       }
     ];
 
-    const { error: messageError } = await supabase
+    const { error: messageError } = await supabaseAdmin
       .from('messages')
       .insert(messagesToInsert);
 
@@ -265,13 +286,14 @@ export const getConversations = async (req, res) => {
   try {
     const userId = req.user.id; // Get authenticated user ID
 
-    const { data: conversations, error } = await supabase
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    const { data: conversations, error } = await supabaseAdmin
       .from('conversations')
       .select(`
         *,
         messages (*)
       `)
-      .eq('user_id', userId) // Filter by authenticated user
+      .eq('user_id', userId) // CRITICAL: Filter by authenticated user for data isolation
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -299,11 +321,12 @@ export const updateConversation = async (req, res) => {
     const updates = req.body;
     const userId = req.user.id; // Get authenticated user ID
 
-    const { error } = await supabase
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    const { error } = await supabaseAdmin
       .from('conversations')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId); // Ensure user owns the conversation
+      .eq('user_id', userId); // CRITICAL: Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to update conversation: ${error.message}`);
@@ -329,15 +352,15 @@ export const deleteConversation = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id; // Get authenticated user ID
 
-    // RLS will automatically filter, but we can also delete messages manually
-    // Supabase RLS + CASCADE should handle this automatically
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    // Messages will be deleted via CASCADE foreign key constraint
     
     // Delete conversation (messages will be deleted via CASCADE)
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('conversations')
       .delete()
       .eq('id', id)
-      .eq('user_id', userId); // Ensure user owns the conversation
+      .eq('user_id', userId); // CRITICAL: Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to delete conversation: ${error.message}`);

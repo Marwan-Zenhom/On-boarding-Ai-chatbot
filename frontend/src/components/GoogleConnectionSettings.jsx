@@ -70,7 +70,7 @@ const GoogleConnectionSettings = () => {
         throw new Error('Not authenticated. Please log in again.');
       }
 
-      const response = await fetch('http://localhost:8000/api/google-auth/url', {
+      const response = await fetch('http://localhost:8000/api/google-auth/auth-url', {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
@@ -86,14 +86,39 @@ const GoogleConnectionSettings = () => {
         const left = window.screen.width / 2 - width / 2;
         const top = window.screen.height / 2 - height / 2;
         
-        window.open(
+        const popup = window.open(
           data.authUrl,
           'Google OAuth',
           `width=${width},height=${height},left=${left},top=${top}`
         );
 
-        // Check connection status after popup closes
-        setTimeout(() => checkConnectionStatus(), 3000);
+        // Listen for success message from popup
+        const messageHandler = (event) => {
+          // Verify message origin for security (in production, use specific origin)
+          if (event.data && event.data.type === 'GOOGLE_OAUTH_SUCCESS') {
+            window.removeEventListener('message', messageHandler);
+            // Refresh connection status immediately
+            checkConnectionStatus();
+          }
+        };
+
+        window.addEventListener('message', messageHandler);
+
+        // Fallback: Check connection status periodically if popup is still open
+        const checkInterval = setInterval(() => {
+          if (popup && popup.closed) {
+            clearInterval(checkInterval);
+            window.removeEventListener('message', messageHandler);
+            // Check status after a short delay to ensure backend processed the callback
+            setTimeout(() => checkConnectionStatus(), 1000);
+          }
+        }, 500);
+
+        // Cleanup after 5 minutes if popup is still open
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          window.removeEventListener('message', messageHandler);
+        }, 300000);
       }
     } catch (error) {
       console.error('Failed to initiate Google OAuth:', error);
@@ -113,12 +138,17 @@ const GoogleConnectionSettings = () => {
       }
 
       const response = await fetch('http://localhost:8000/api/google-auth/disconnect', {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         }
       });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to disconnect' }));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
 
       const data = await response.json();
       
@@ -130,9 +160,16 @@ const GoogleConnectionSettings = () => {
           details: null
         });
         alert('Google account disconnected successfully');
+      } else {
+        throw new Error(data.error || 'Failed to disconnect');
       }
     } catch (error) {
       console.error('Failed to disconnect:', error);
+      setConnectionStatus(prev => ({
+        ...prev,
+        loading: false,
+        error: error.message
+      }));
       alert(`Failed to disconnect: ${error.message}`);
     }
   };
