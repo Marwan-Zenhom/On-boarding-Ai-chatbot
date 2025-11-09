@@ -42,3 +42,10 @@ backend/data/NovaTech_*.csv
 *.tmp
 *.temp
 .cache/
+**/node_modules/.cache/
+**/.cache/
+frontend/node_modules/.cache/
+backend/node_modules/.cache/
+
+# Documentation files
+md_files/
