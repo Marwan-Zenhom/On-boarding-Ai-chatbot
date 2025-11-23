@@ -1,50 +1,79 @@
-# 🤖 AI-Powered Onboarding Chatbot
+# 🤖 NovaTech AI Onboarding Assistant
 
-An intelligent chatbot designed to help new employees navigate their onboarding journey at NovaTech. Built with React, Express, and Google Gemini AI, featuring semantic search over a custom knowledge base.
+<div align="center">
+
+![NovaTech AI](https://img.shields.io/badge/AI-Agentic-blue?style=for-the-badge&logo=google-gemini)
+![React](https://img.shields.io/badge/Frontend-React_19-61DAFB?style=for-the-badge&logo=react)
+![Express](https://img.shields.io/badge/Backend-Express.js-000000?style=for-the-badge&logo=express)
+![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase)
+
+**An enterprise-grade Agentic AI chatbot designed to streamline employee onboarding.**  
+*Powered by Google Gemini 2.0 Flash, RAG, and Autonomous Tool Use.*
+
+[Features](#-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Tech Stack](#-technology-stack)
+
+</div>
 
 ---
 
 ## ✨ Features
 
-### 🧠 Intelligent AI Assistant
-- **Semantic Search:** Finds relevant information using vector embeddings (Hugging Face)
-- **Context-Aware:** Remembers conversation history and understands follow-up questions
-- **Natural Language:** Friendly, conversational responses with proper formatting
-- **Knowledge Base:** Pre-loaded with employee data, FAQs, and onboarding tasks
+### 🧠 Advanced Agentic AI ("Nova")
+- **Multi-Step Workflows:** Capable of executing complex tasks like *"Check my calendar for next week and book a meeting with John."*
+- **Autonomous Tool Use:** Intelligently utilizes a suite of tools:
+  - 📅 **Calendar:** Check availability and book events
+  - 📧 **Email:** Draft and send emails to colleagues
+  - 👥 **Directory:** Look up employee details and team structures
+- **Human-in-the-Loop:** Built-in **Approval Workflow** ensures no critical action (like sending emails) happens without your explicit confirmation via a secure UI.
 
-### 💬 Modern Chat Interface
-- **Real-time Messaging:** Instant responses with typing indicators
-- **Rich Formatting:** Markdown rendering with bold text, lists, and proper spacing
-- **Multi-Conversation:** Create and manage multiple chat sessions
-- **Dark/Light Theme:** Toggle between themes
-- **Voice Input:** Speech-to-text support
-- **Message Actions:** Copy, edit, regenerate, and react to messages
+### 🔍 Intelligent Search & Context
+- **Hybrid RAG Engine:** Combines **Semantic Search** (Hugging Face embeddings) with **Context-Aware Keyword Search** for maximum accuracy.
+- **Smart Context:** Analyzes the last 20 messages to understand pronouns and implicit references (e.g., *"What is **his** email?"*).
+- **Smart Greeting System:** Bypasses expensive vector searches for natural, instant greetings.
 
-### 🔒 Secure & Scalable
-- **Backend API:** Express.js REST API with proper error handling
-- **Database:** PostgreSQL (Supabase) with vector search capabilities
-- **Environment Variables:** Secure credential management
-- **Retry Logic:** Handles API overload gracefully
+### 🎨 Modern Frontend Experience
+- **Human-in-the-Loop UI:** Dedicated `ActionApprovalModal` for reviewing and approving agent actions.
+- **Profile Management:** Complete avatar upload system and user profile settings.
+- **Design System:** Modular, responsive UI with native Dark/Light mode switching.
+- **Rich Interactions:** Markdown rendering, typing indicators, and message actions (copy, edit, regenerate).
+
+### 🛡️ Enterprise-Grade Resilience
+- **Audit Logging:** Every agent action is tracked with execution time and status for full observability.
+- **Action Templates:** Pre-defined workflows (e.g., "Vacation Request") for consistent process execution.
+- **Robust Error Handling:** Exponential backoff retry logic for all AI API calls ensures stability under load.
+- **Security:** Row Level Security (RLS) and secure Google OAuth 2.0 authentication.
 
 ---
 
-## 🏗️ Architecture
+## �️ Architecture
 
-```
-┌─────────────┐
-│   React     │ ← Frontend (Port 3000)
-│  Frontend   │   - Modern UI with Lucide icons
-└──────┬──────┘   - Markdown rendering
-       │          - State management
-       ↓
-┌─────────────┐
-│   Express   │ ← Backend API (Port 8000)
-│   Backend   │   - RESTful endpoints
-└──────┬──────┘   - Business logic
-       │
-       ├─→ Google Gemini AI (Text generation)
-       ├─→ Hugging Face (Vector embeddings)
-       └─→ Supabase (PostgreSQL + pgvector)
+The system follows a modular **Agentic RAG Architecture**:
+
+```mermaid
+graph TD
+    User[👤 User] <--> Frontend[⚛️ React Frontend]
+    Frontend <--> API[🚀 Express Backend]
+    
+    subgraph "Backend Services"
+        API <--> Auth[🔐 Supabase Auth]
+        API <--> Agent[🤖 Agent Service]
+        
+        Agent <--> Router{🧠 Intent Router}
+        
+        Router -- "Greeting" --> Direct[💬 Instant Response]
+        Router -- "Query" --> RAG[📚 RAG Engine]
+        Router -- "Action" --> Tools[🛠️ Tool Executor]
+        
+        RAG <--> VectorDB[(🗄️ Supabase Vector)]
+        RAG <--> Embed[🤗 Hugging Face]
+        
+        Tools -- "Requires Approval" --> Approval[⚠️ Approval System]
+        Approval -- "Approved" --> External[🌐 External APIs]
+        
+        External <--> Google[📅 Google Workspace]
+    end
+    
+    Agent <--> Gemini[✨ Google Gemini 2.0]
 ```
 
 ---
@@ -52,23 +81,24 @@ An intelligent chatbot designed to help new employees navigate their onboarding 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js v18+
-- Supabase account (free tier)
-- Google Gemini API key (free)
-- Hugging Face token (free)
+- **Node.js** v18+
+- **Supabase** account (free tier)
+- **Google Cloud** project (for OAuth & Gemini)
+- **Hugging Face** token
 
 ### Installation
 
-1. **Clone and setup:**
+1. **Clone the repository:**
    ```bash
+   git clone https://github.com/yourusername/On-boarding-Ai-chatbot.git
    cd On-boarding-Ai-chatbot
    ```
 
-2. **Follow the Quick Start Guide:**
-   See `QUICKSTART.md` for step-by-step instructions (5 minutes)
+2. **Fast Setup:**
+   Follow our **[5-Minute Quick Start Guide](QUICKSTART.md)** to get up and running immediately.
 
-3. **Or follow detailed setup:**
-   See `SETUP.md` for comprehensive documentation
+3. **Detailed Configuration:**
+   For production setup and environment variables, see **[SETUP.md](SETUP.md)**.
 
 ---
 
@@ -76,209 +106,93 @@ An intelligent chatbot designed to help new employees navigate their onboarding 
 
 ```
 On-boarding-Ai-chatbot/
-├── backend/                # Express.js API server
-│   ├── config/            # Database configuration
-│   ├── controllers/       # Request handlers
-│   ├── routes/           # API routes
-│   ├── services/         # Business logic
-│   │   ├── geminiService.js         # AI response generation
-│   │   ├── knowledgeBaseService.js  # Vector embeddings & search
-│   │   └── keywordSearchService.js  # Fallback keyword search
-│   ├── scripts/          # Utility scripts
-│   │   ├── loadKnowledgeBase.js    # CSV loader
-│   │   └── clearKnowledgeBase.js   # Data cleanup
-│   ├── database/         # SQL schemas
-│   └── data/             # CSV knowledge base files
+├── backend/                        # Express.js API Server
+│   ├── config/                     # Database & App Config
+│   ├── controllers/                # Request Handlers
+│   ├── database/                   # SQL Schemas & Migrations
+│   │   └── phase5-agentic-ai.sql   # Agent System Schema
+│   ├── routes/                     # API Endpoints
+│   │   ├── agentRoutes.js          # Agent & Approval Routes
+│   │   └── googleAuthRoutes.js     # OAuth Integration
+│   ├── services/                   # Business Logic
+│   │   ├── agentService.js         # Core Agent Logic
+│   │   ├── tools/                  # Tool Definitions
+│   │   ├── geminiService.js        # LLM Integration
+│   │   └── knowledgeBaseService.js # RAG Implementation
+│   └── scripts/                    # Maintenance Scripts
 │
-├── frontend/              # React application
+├── frontend/                       # React 19 Application
 │   ├── src/
-│   │   ├── App.js        # Main component
-│   │   ├── services/     # API client
-│   │   └── styles/       # CSS modules
-│   └── public/           # Static assets
+│   │   ├── components/             # Reusable UI Components
+│   │   │   └── ActionApprovalModal # Human-in-the-Loop UI
+│   │   ├── contexts/               # State Management (Auth)
+│   │   ├── styles/                 # CSS Design System
+│   │   └── App.js                  # Main Application
+│   └── public/
 │
-├── QUICKSTART.md         # 5-minute setup guide
-├── SETUP.md             # Detailed documentation
-└── README.md            # This file
+├── QUICKSTART.md                   # Fast Setup Guide
+├── SETUP.md                        # Comprehensive Documentation
+└── README.md                       # Project Overview
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-### Frontend
-- **React 19** - UI framework
-- **Lucide React** - Icon library
-- **React Markdown** - Formatted message rendering
-- **Remark GFM** - GitHub Flavored Markdown
+### **Frontend**
+- **Framework:** React 19
+- **Routing:** React Router DOM
+- **Styling:** CSS Modules with Design Tokens (Variables)
+- **Icons:** Lucide React
+- **Markdown:** React Markdown + Remark GFM
 
-### Backend
-- **Express.js** - Web framework
-- **Google Gemini AI** - Text generation (gemini-2.0-flash)
-- **Hugging Face** - Vector embeddings (all-MiniLM-L6-v2)
-- **Supabase** - PostgreSQL database with pgvector extension
-- **Node.js 18+** - Runtime environment
+### **Backend**
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js
+- **Security:** Helmet, CORS, Express Rate Limit
+- **Logging:** Winston, Morgan
 
----
-
-## 🔑 API Endpoints
-
-### Chat Endpoints
-- `POST /api/chat/message` - Send a message
-- `POST /api/chat/regenerate/:messageId` - Regenerate response
-- `GET /api/chat/conversations` - Get all conversations
-- `PUT /api/chat/conversations/:id` - Update conversation
-- `DELETE /api/chat/conversations/:id` - Delete conversation
-
-### Health Check
-- `GET /api/health` - Server status
+### **AI & Data**
+- **LLM:** Google Gemini 2.0 Flash (`gemini-2.0-flash-exp`)
+- **Embeddings:** Hugging Face (`BAAI/bge-small-en-v1.5`)
+- **Database:** Supabase (PostgreSQL 15 + `pgvector`)
+- **Storage:** Supabase Storage (Avatars)
+- **Auth:** Supabase Auth + Google OAuth 2.0
 
 ---
 
 ## 🎯 How It Works
 
-### 1. **User asks a question**
-   → Frontend sends message to backend
-
-### 2. **Semantic Search**
-   → Generate embedding for user query (Hugging Face)
-   → Search knowledge base using vector similarity (Supabase)
-   → Retrieve top 3 most relevant documents
-
-### 3. **AI Response Generation**
-   → Build context with retrieved documents + conversation history
-   → Send to Google Gemini with formatting instructions
-   → Return formatted response with markdown
-
-### 4. **Frontend Rendering**
-   → Parse markdown (bold, lists, line breaks)
-   → Display beautifully formatted response
+1.  **Intent Recognition:** The Agent analyzes your message to decide if it's a greeting, a knowledge query, or a task.
+2.  **RAG (Retrieval Augmented Generation):**
+    *   If it's a query, it converts your question into a vector.
+    *   It searches the Knowledge Base for relevant policies or employee info.
+    *   It combines this context with your conversation history.
+3.  **Tool Execution (Agentic):**
+    *   If you ask to "Book a meeting", the Agent identifies the `book_calendar_event` tool.
+    *   It extracts the necessary parameters (date, time, attendees).
+    *   **Safety Check:** It pauses and requests your approval via the UI.
+    *   Once approved, it executes the API call to Google Calendar.
 
 ---
 
 ## 🧪 Example Queries
 
-Try asking:
-- **Employee Info:** "Who is Milan Nguyen? What's his email?"
-- **Department Search:** "Who works in Software Development?"
-- **Company Policies:** "How many vacation days do I have?"
-- **Onboarding Tasks:** "What are the onboarding tasks for HR?"
-- **Follow-up Questions:** "What's his role?" (after asking about someone)
+Try these to see the Agent in action:
 
----
-
-## 📊 Knowledge Base
-
-The system uses 3 CSV files:
-
-1. **Employees** (30 records)
-   - Names, ages, departments, roles, emails, supervisors
-
-2. **FAQs** (Company Policies)
-   - Vacation days, sick leave, health insurance, etc.
-
-3. **Onboarding Tasks** (By Department)
-   - Preboarding, Day 1, Week 1, Month 1 tasks
-
----
-
-## 🔐 Environment Variables
-
-### Backend (`backend/.env`)
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
-GEMINI_API_KEY=your_gemini_api_key
-HUGGINGFACE_API_KEY=your_huggingface_token
-PORT=8000
-NODE_ENV=development
-```
-
-### Frontend (`frontend/.env`)
-```env
-REACT_APP_API_URL=http://localhost:8000
-```
-
----
-
-## 🚦 Running the Application
-
-### Development Mode
-
-**Terminal 1 - Backend:**
-```bash
-cd backend
-node server.js
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm start
-```
-
-Access at: http://localhost:3000
-
----
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**1. Port already in use**
-```bash
-taskkill /F /IM node.exe  # Windows
-```
-
-**2. Gemini API overloaded (503)**
-- System automatically retries 3 times with exponential backoff
-- Wait a few seconds and try again
-
-**3. No search results**
-- Check if knowledge base is loaded: `backend/data/` should have 3 CSV files
-- Reload: `node scripts/loadKnowledgeBase.js`
-
-**4. Frontend warnings (ESLint)**
-- Warnings are normal and don't affect functionality
-- React markdown components intentionally use dynamic content
-
----
-
-## 📈 Future Enhancements (Phase 2)
-
-- [ ] User authentication (OAuth 2.0)
-- [ ] Multi-user support with isolated chat histories
-- [ ] Role-based access control
-- [ ] Admin dashboard for knowledge base management
-- [ ] Analytics and usage tracking
-- [ ] Multi-language support
-- [ ] File upload and processing
+*   **Complex Action:** *"Check my calendar for tomorrow afternoon. If I'm free, book a sync with Milan at 2 PM."*
+*   **Contextual Query:** *"Who is the head of Engineering? What is **her** email?"*
+*   **Policy Search:** *"What is the policy for remote work?"*
+*   **Onboarding:** *"What are my tasks for the first week?"*
 
 ---
 
 ## 📝 License
 
-This project is part of a thesis prototype.
+This project is a thesis prototype designed for educational and demonstration purposes.
 
 ---
 
-## 🤝 Support
-
-For issues or questions:
-1. Check `SETUP.md` for detailed documentation
-2. Review `QUICKSTART.md` for common setup issues
-3. Ensure all environment variables are correctly set
-4. Verify API keys are valid and have sufficient quota
-
----
-
-## 🎓 Thesis Project
-
-**Project:** AI-Powered Onboarding Chat Assistant  
-**Institution:** [Your University]  
-**Year:** 2025  
-**Purpose:** Prototype demonstrating RAG (Retrieval Augmented Generation) for enterprise onboarding
-
----
-
-**Built with ❤️ using React, Express, Google Gemini, and Hugging Face**
+<div align="center">
+  <sub>Built with ❤️ by [Your Name]</sub>
+</div>
