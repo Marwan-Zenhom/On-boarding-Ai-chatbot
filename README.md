@@ -1,179 +1,198 @@
-# 🤖 Onboarding Chat - AI-Powered Employee Assistant
+# 🤖 NovaTech AI Onboarding Assistant
 
-A full-stack onboarding chat application that helps new employees get familiar with company policies, procedures, and resources using **Google's Gemini AI**.
+<div align="center">
 
-![Architecture](https://img.shields.io/badge/Architecture-Backend%20%2B%20Frontend-blue)
-![AI](https://img.shields.io/badge/AI-Google%20Gemini%201.5%20Flash-green)
-![Database](https://img.shields.io/badge/Database-Supabase-purple)
-![Frontend](https://img.shields.io/badge/Frontend-React%2018-cyan)
+![NovaTech AI](https://img.shields.io/badge/AI-Agentic-blue?style=for-the-badge&logo=google-gemini)
+![React](https://img.shields.io/badge/Frontend-React_19-61DAFB?style=for-the-badge&logo=react)
+![Express](https://img.shields.io/badge/Backend-Express.js-000000?style=for-the-badge&logo=express)
+![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase)
 
-## ⚡ **NEW: Real AI Integration!**
+**An enterprise-grade Agentic AI chatbot designed to streamline employee onboarding.**  
+*Powered by Google Gemini 2.0 Flash, RAG, and Autonomous Tool Use.*
 
-This project now features **real generative AI responses** using Google's Gemini AI model, replacing the previous mock responses with intelligent, context-aware assistance.
+[Features](#-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Tech Stack](#-technology-stack)
 
-## 🏗️ Architecture
-
-**Full-Stack Separation:**
-```
-backend/     → Express.js API + Gemini AI integration
-frontend/    → React application
-shared/      → Common types and utilities
-```
-
-## ✨ Key Features
-
-### 🤖 **Real AI Responses**
-- **Google Gemini 1.5 Flash** integration
-- Context-aware conversation history
-- Specialized onboarding assistant persona
-- Intelligent fallback responses
-
-### 💬 **Advanced Chat Interface**
-- Dynamic input states (mic → send → stop)
-- Real-time character-by-character typing
-- Message regeneration with AI
-- File upload support
-- Message reactions and editing
-
-### 💾 **Persistent Storage**
-- Supabase database integration
-- Conversation history and favorites
-- Archive functionality
-- Cross-device synchronization
-
-### 🎨 **Modern UI/UX**
-- Responsive design (mobile-first)
-- Dark/light theme toggle
-- Smooth animations and transitions
-- Keyboard shortcuts ready
-
-## 🚀 Quick Start
-
-**For detailed setup instructions, see [SETUP.md](SETUP.md)**
-
-### Fast Setup (3 minutes)
-
-```bash
-# 1. Install all dependencies
-npm run setup
-
-# 2. Configure environment variables
-# Copy backend/env.example to backend/.env (add your API keys)
-# Copy frontend/env.example to frontend/.env.local (add your API keys)
-
-# 3. Run both servers
-npm run dev
-```
-
-### Get Your API Keys
-
-- **Gemini AI**: [Google AI Studio](https://makersuite.google.com/app/apikey)
-- **Supabase**: [Supabase Dashboard](https://supabase.com) > Settings > API
-
-### Database Setup
-Run the SQL from [SETUP.md](SETUP.md) in your Supabase SQL Editor.
-
-### Access Points
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **Health Check**: http://localhost:5000/api/health
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Express.js** - REST API server
-- **Google Generative AI** - Gemini 1.5 Flash model
-- **Supabase** - Database and real-time updates
-- **CORS, Helmet, Morgan** - Security and logging
-
-### Frontend
-- **React 18** - UI framework with hooks
-- **Lucide React** - Icon library
-- **CSS Modules** - Styled components
-- **Fetch API** - Backend communication
-
-### Database
-- **PostgreSQL** (via Supabase)
-- **Real-time subscriptions**
-- **Row Level Security**
-
-## 🔧 Development Scripts
-
-```bash
-# Root level management
-npm run dev              # Start both backend and frontend
-npm run setup            # Install all dependencies
-
-# Backend development
-npm run dev:backend      # Start backend with auto-reload
-npm run start:backend    # Production backend start
-
-# Frontend development  
-npm run dev:frontend     # Start React development server
-npm run build:frontend   # Create production build
-```
-
-## 📚 API Endpoints
-
-### Chat API (`/api/chat/`)
-- `POST /message` - Send message and get AI response
-- `POST /regenerate` - Regenerate last AI response
-- `GET /conversations` - Get all conversations
-
-### System API
-- `GET /api/health` - Health check
-
-## 🎯 Use Cases
-
-Perfect for organizations wanting to improve their onboarding experience:
-
-- **HR Departments** - Automate common onboarding questions
-- **IT Teams** - Provide instant setup guidance
-- **Remote Teams** - Centralized onboarding assistance
-- **Training Programs** - Interactive learning companion
-
-## 🚀 Deployment
-
-### Development
-```bash
-npm run dev  # Local development with hot reload
-```
-
-### Production
-- **Backend**: Deploy to Railway, Render, or Heroku
-- **Frontend**: Deploy to Vercel, Netlify, or Cloudflare Pages
-- **Database**: Supabase (fully managed)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 🔒 Environment Variables
-
-**Required for Backend:**
-- `GEMINI_API_KEY` - Google AI Studio API key
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_ANON_KEY` - Supabase anon key
-
-**Required for Frontend:**
-- `REACT_APP_API_URL` - Backend API URL
-- `REACT_APP_SUPABASE_URL` - Supabase project URL (optional)
-- `REACT_APP_SUPABASE_ANON_KEY` - Supabase anon key (optional)
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- 📖 **Detailed Setup**: [SETUP.md](SETUP.md)
-- 🐛 **Issues**: [GitHub Issues](../../issues)
-- 💬 **Discussions**: [GitHub Discussions](../../discussions)
+</div>
 
 ---
 
-Built with ❤️ by [Marwan Zenhom](https://github.com/Marwan-Zenhom) 
+## ✨ Features
+
+### 🧠 Advanced Agentic AI ("Nova")
+- **Multi-Step Workflows:** Capable of executing complex tasks like *"Check my calendar for next week and book a meeting with John."*
+- **Autonomous Tool Use:** Intelligently utilizes a suite of tools:
+  - 📅 **Calendar:** Check availability and book events
+  - 📧 **Email:** Draft and send emails to colleagues
+  - 👥 **Directory:** Look up employee details and team structures
+- **Human-in-the-Loop:** Built-in **Approval Workflow** ensures no critical action (like sending emails) happens without your explicit confirmation via a secure UI.
+
+### 🔍 Intelligent Search & Context
+- **Hybrid RAG Engine:** Combines **Semantic Search** (Hugging Face embeddings) with **Context-Aware Keyword Search** for maximum accuracy.
+- **Smart Context:** Analyzes the last 20 messages to understand pronouns and implicit references (e.g., *"What is **his** email?"*).
+- **Smart Greeting System:** Bypasses expensive vector searches for natural, instant greetings.
+
+### 🎨 Modern Frontend Experience
+- **Human-in-the-Loop UI:** Dedicated `ActionApprovalModal` for reviewing and approving agent actions.
+- **Profile Management:** Complete avatar upload system and user profile settings.
+- **Design System:** Modular, responsive UI with native Dark/Light mode switching.
+- **Rich Interactions:** Markdown rendering, typing indicators, and message actions (copy, edit, regenerate).
+
+### 🛡️ Enterprise-Grade Resilience
+- **Audit Logging:** Every agent action is tracked with execution time and status for full observability.
+- **Action Templates:** Pre-defined workflows (e.g., "Vacation Request") for consistent process execution.
+- **Robust Error Handling:** Exponential backoff retry logic for all AI API calls ensures stability under load.
+- **Security:** Row Level Security (RLS) and secure Google OAuth 2.0 authentication.
+
+---
+
+## �️ Architecture
+
+The system follows a modular **Agentic RAG Architecture**:
+
+```mermaid
+graph TD
+    User[👤 User] <--> Frontend[⚛️ React Frontend]
+    Frontend <--> API[🚀 Express Backend]
+    
+    subgraph "Backend Services"
+        API <--> Auth[🔐 Supabase Auth]
+        API <--> Agent[🤖 Agent Service]
+        
+        Agent <--> Router{🧠 Intent Router}
+        
+        Router -- "Greeting" --> Direct[💬 Instant Response]
+        Router -- "Query" --> RAG[📚 RAG Engine]
+        Router -- "Action" --> Tools[🛠️ Tool Executor]
+        
+        RAG <--> VectorDB[(🗄️ Supabase Vector)]
+        RAG <--> Embed[🤗 Hugging Face]
+        
+        Tools -- "Requires Approval" --> Approval[⚠️ Approval System]
+        Approval -- "Approved" --> External[🌐 External APIs]
+        
+        External <--> Google[📅 Google Workspace]
+    end
+    
+    Agent <--> Gemini[✨ Google Gemini 2.0]
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js** v18+
+- **Supabase** account (free tier)
+- **Google Cloud** project (for OAuth & Gemini)
+- **Hugging Face** token
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/On-boarding-Ai-chatbot.git
+   cd On-boarding-Ai-chatbot
+   ```
+
+2. **Fast Setup:**
+   Follow our **[5-Minute Quick Start Guide](QUICKSTART.md)** to get up and running immediately.
+
+3. **Detailed Configuration:**
+   For production setup and environment variables, see **[SETUP.md](SETUP.md)**.
+
+---
+
+## 📁 Project Structure
+
+```
+On-boarding-Ai-chatbot/
+├── backend/                        # Express.js API Server
+│   ├── config/                     # Database & App Config
+│   ├── controllers/                # Request Handlers
+│   ├── database/                   # SQL Schemas & Migrations
+│   │   └── phase5-agentic-ai.sql   # Agent System Schema
+│   ├── routes/                     # API Endpoints
+│   │   ├── agentRoutes.js          # Agent & Approval Routes
+│   │   └── googleAuthRoutes.js     # OAuth Integration
+│   ├── services/                   # Business Logic
+│   │   ├── agentService.js         # Core Agent Logic
+│   │   ├── tools/                  # Tool Definitions
+│   │   ├── geminiService.js        # LLM Integration
+│   │   └── knowledgeBaseService.js # RAG Implementation
+│   └── scripts/                    # Maintenance Scripts
+│
+├── frontend/                       # React 19 Application
+│   ├── src/
+│   │   ├── components/             # Reusable UI Components
+│   │   │   └── ActionApprovalModal # Human-in-the-Loop UI
+│   │   ├── contexts/               # State Management (Auth)
+│   │   ├── styles/                 # CSS Design System
+│   │   └── App.js                  # Main Application
+│   └── public/
+│
+├── QUICKSTART.md                   # Fast Setup Guide
+├── SETUP.md                        # Comprehensive Documentation
+└── README.md                       # Project Overview
+```
+
+---
+
+## 🛠️ Technology Stack
+
+### **Frontend**
+- **Framework:** React 19
+- **Routing:** React Router DOM
+- **Styling:** CSS Modules with Design Tokens (Variables)
+- **Icons:** Lucide React
+- **Markdown:** React Markdown + Remark GFM
+
+### **Backend**
+- **Runtime:** Node.js 18+
+- **Framework:** Express.js
+- **Security:** Helmet, CORS, Express Rate Limit
+- **Logging:** Winston, Morgan
+
+### **AI & Data**
+- **LLM:** Google Gemini 2.0 Flash (`gemini-2.0-flash-exp`)
+- **Embeddings:** Hugging Face (`BAAI/bge-small-en-v1.5`)
+- **Database:** Supabase (PostgreSQL 15 + `pgvector`)
+- **Storage:** Supabase Storage (Avatars)
+- **Auth:** Supabase Auth + Google OAuth 2.0
+
+---
+
+## 🎯 How It Works
+
+1.  **Intent Recognition:** The Agent analyzes your message to decide if it's a greeting, a knowledge query, or a task.
+2.  **RAG (Retrieval Augmented Generation):**
+    *   If it's a query, it converts your question into a vector.
+    *   It searches the Knowledge Base for relevant policies or employee info.
+    *   It combines this context with your conversation history.
+3.  **Tool Execution (Agentic):**
+    *   If you ask to "Book a meeting", the Agent identifies the `book_calendar_event` tool.
+    *   It extracts the necessary parameters (date, time, attendees).
+    *   **Safety Check:** It pauses and requests your approval via the UI.
+    *   Once approved, it executes the API call to Google Calendar.
+
+---
+
+## 🧪 Example Queries
+
+Try these to see the Agent in action:
+
+*   **Complex Action:** *"Check my calendar for tomorrow afternoon. If I'm free, book a sync with Milan at 2 PM."*
+*   **Contextual Query:** *"Who is the head of Engineering? What is **her** email?"*
+*   **Policy Search:** *"What is the policy for remote work?"*
+*   **Onboarding:** *"What are my tasks for the first week?"*
+
+---
+
+## 📝 License
+
+This project is a thesis prototype designed for educational and demonstration purposes.
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ by [Your Name]</sub>
+</div>

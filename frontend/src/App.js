@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Plus, ArrowUp, User, Bot, Sun, Moon, 
   Edit3, Trash2, Search, Copy, Mic, MicOff, 
-  Heart, Archive, Sidebar,
+  Heart, Archive, Sidebar, LogOut,
   ThumbsUp, ThumbsDown, RotateCcw, X, Check, Upload, 
-  FileText, Paperclip, MoreHorizontal, Square
+  FileText, Paperclip, MoreHorizontal, Square, Settings,
+  Mail, Lock, Camera, CheckCircle, XCircle, Calendar
 } from 'lucide-react';
 import apiService from './services/apiService';
+import GoogleConnectionSettings from './components/GoogleConnectionSettings';
+import ActionApprovalModal from './components/ActionApprovalModal';
 
 // --- Custom Hooks ---
 const useLocalStorage = (key, initialValue) => {
@@ -256,8 +261,530 @@ const MessageActions = ({ message, onCopy, onEdit, onReact, onRegenerate }) => (
   </div>
 );
 
+// --- Profile Settings Modal Component ---
+const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate, authFunctions }) => {
+  const [activeTab, setActiveTab] = useState('profile');
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.display_name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileImage, setProfileImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const fileInputRef = useRef(null);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size should be less than 5MB');
+        return;
+      }
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+
+    try {
+      // Upload profile image if one was selected
+      if (profileImage) {
+        const { data: imageUrl, error: imageError } = await authFunctions.uploadProfileImage(profileImage);
+        if (imageError) throw imageError;
+        console.log('Image uploaded:', imageUrl);
+      }
+
+      // Update display name
+      if (displayName !== user?.user_metadata?.display_name) {
+        const { error: profileError } = await authFunctions.updateProfile({
+          display_name: displayName,
+        });
+        if (profileError) throw profileError;
+      }
+
+      // Update email if changed
+      if (email !== user?.email) {
+        const { error: emailError } = await authFunctions.updateEmail(email);
+        if (emailError) throw emailError;
+      }
+      
+      setSuccess('Profile updated successfully!');
+      setTimeout(() => {
+        onUpdate({ displayName, email });
+      }, 1500);
+    } catch (err) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error: passwordError } = await authFunctions.updatePassword(newPassword);
+      if (passwordError) throw passwordError;
+      
+      setSuccess('Password updated successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setError(err.message || 'Failed to update password');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div 
+        className="modal-content profile-settings-modal" 
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: isDarkMode ? '#2c2c2c' : '#ffffff',
+          maxWidth: '600px',
+          width: '90%',
+          maxHeight: '90vh',
+          overflow: 'auto'
+        }}
+      >
+        <div className="modal-header">
+          <h2 style={{ color: isDarkMode ? '#e5e7eb' : '#1f2937' }}>Profile Settings</h2>
+          <button onClick={onClose} className="modal-close">
+            <X className="icon" />
+          </button>
+        </div>
+
+        <div className="modal-body" style={{ padding: '24px' }}>
+          {/* Tabs */}
+          <div style={{
+            display: 'flex',
+            borderBottom: `2px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
+            marginBottom: '24px'
+          }}>
+            <button
+              onClick={() => setActiveTab('profile')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'profile' ? `2px solid #19c37d` : 'none',
+                color: activeTab === 'profile' ? '#19c37d' : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                fontWeight: activeTab === 'profile' ? '600' : '400',
+                cursor: 'pointer',
+                fontSize: '15px',
+                marginBottom: '-2px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Profile
+            </button>
+            <button
+              onClick={() => setActiveTab('security')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'security' ? `2px solid #19c37d` : 'none',
+                color: activeTab === 'security' ? '#19c37d' : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                fontWeight: activeTab === 'security' ? '600' : '400',
+                cursor: 'pointer',
+                fontSize: '15px',
+                marginBottom: '-2px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Security
+            </button>
+            <button
+              onClick={() => setActiveTab('google')}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                background: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'google' ? `2px solid #19c37d` : 'none',
+                color: activeTab === 'google' ? '#19c37d' : (isDarkMode ? '#9ca3af' : '#6b7280'),
+                fontWeight: activeTab === 'google' ? '600' : '400',
+                cursor: 'pointer',
+                fontSize: '15px',
+                marginBottom: '-2px',
+                transition: 'all 0.2s'
+              }}
+            >
+              Google Account
+            </button>
+          </div>
+
+          {/* Error/Success Messages */}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              color: '#ef4444',
+              marginBottom: '16px',
+              fontSize: '14px'
+            }}>
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div style={{
+              padding: '12px 16px',
+              background: 'rgba(25, 195, 125, 0.1)',
+              border: '1px solid #19c37d',
+              borderRadius: '8px',
+              color: '#19c37d',
+              marginBottom: '16px',
+              fontSize: '14px'
+            }}>
+              {success}
+            </div>
+          )}
+
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <form onSubmit={handleProfileUpdate}>
+              {/* Profile Picture */}
+              <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  background: (imagePreview || user?.user_metadata?.avatar_url) 
+                    ? `url(${imagePreview || user?.user_metadata?.avatar_url}) center/cover` 
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  margin: '0 auto 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '48px',
+                  fontWeight: '600',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  overflow: 'hidden'
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                >
+                  {!(imagePreview || user?.user_metadata?.avatar_url) && (user?.user_metadata?.display_name || user?.email || 'U')[0].toUpperCase()}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    background: 'rgba(0, 0, 0, 0.6)',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Camera size={20} />
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  style={{ display: 'none' }}
+                />
+                <p style={{
+                  fontSize: '13px',
+                  color: isDarkMode ? '#9ca3af' : '#6b7280',
+                  margin: 0
+                }}>
+                  Click to upload profile picture (max 5MB)
+                </p>
+              </div>
+
+              {/* Display Name */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                  marginBottom: '8px'
+                }}>
+                  <User size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter your display name"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${isDarkMode ? '#4d4d4f' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isDarkMode ? '#40414f' : '#ffffff',
+                    color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#19c37d'}
+                  onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
+                />
+              </div>
+
+              {/* Email */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                  marginBottom: '8px'
+                }}>
+                  <Mail size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${isDarkMode ? '#4d4d4f' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isDarkMode ? '#40414f' : '#ffffff',
+                    color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#19c37d'}
+                  onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
+                />
+              </div>
+
+              {/* Save Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: '10px 20px',
+                  background: '#19c37d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1,
+                  transition: 'all 0.2s',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) e.target.style.background = '#15a771';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#19c37d';
+                }}
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </form>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <form onSubmit={handlePasswordUpdate}>
+              {/* Current Password */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                  marginBottom: '8px'
+                }}>
+                  <Lock size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${isDarkMode ? '#4d4d4f' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isDarkMode ? '#40414f' : '#ffffff',
+                    color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#19c37d'}
+                  onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
+                />
+              </div>
+
+              {/* New Password */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                  marginBottom: '8px'
+                }}>
+                  <Lock size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${isDarkMode ? '#4d4d4f' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isDarkMode ? '#40414f' : '#ffffff',
+                    color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#19c37d'}
+                  onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
+                />
+              </div>
+
+              {/* Confirm Password */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                  marginBottom: '8px'
+                }}>
+                  <Lock size={16} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `2px solid ${isDarkMode ? '#4d4d4f' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isDarkMode ? '#40414f' : '#ffffff',
+                    color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#19c37d'}
+                  onBlur={(e) => e.target.style.borderColor = isDarkMode ? '#4d4d4f' : '#e5e7eb'}
+                />
+              </div>
+
+              {/* Update Password Button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                style={{
+                  width: '100%',
+                  padding: '10px 20px',
+                  background: '#19c37d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  opacity: isLoading ? 0.6 : 1,
+                  transition: 'all 0.2s',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isLoading) e.target.style.background = '#15a771';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = '#19c37d';
+                }}
+              >
+              {isLoading ? 'Updating...' : 'Update Password'}
+            </button>
+          </form>
+        )}
+
+        {/* Google Account Tab */}
+        {activeTab === 'google' && (
+          <GoogleConnectionSettings 
+            apiUrl={process.env.REACT_APP_API_URL || 'http://localhost:8000'}
+          />
+        )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main App Component ---
-export default function App() {
+function App({ user, onSignOut, authFunctions }) {
   // --- State Management ---
   const [pastConversations, setPastConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
@@ -272,12 +799,28 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState(null);
+  const [multiRecognitions, setMultiRecognitions] = useState([]);
+  const [speechLanguage, setSpeechLanguage] = useState(() => {
+    // Try to match browser language with supported languages
+    const browserLang = navigator.language || 'en-US';
+    const supportedCodes = [
+      'en-US', 'en-GB', 'de-DE', 'fr-FR', 'es-ES', 'it-IT', 
+      'pt-PT', 'nl-NL', 'ru-RU', 'ja-JP', 'ko-KR', 'zh-CN', 'ar-SA'
+    ];
+    return supportedCodes.includes(browserLang) ? browserLang : 'en-US';
+  });
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [autoDetectLanguage, setAutoDetectLanguage] = useState(true);
+  const [detectedLanguage, setDetectedLanguage] = useState(null);
   const [toast, setToast] = useState(null);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [pendingActions, setPendingActions] = useState([]);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState(null);
   const [displayedContent, setDisplayedContent] = useState({});
@@ -289,6 +832,8 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationTimeoutId, setGenerationTimeoutId] = useState(null);
   const [typingTimeoutIds, setTypingTimeoutIds] = useState([]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   // Load conversations on app start
   useEffect(() => {
@@ -309,9 +854,28 @@ export default function App() {
     loadConversations();
   }, []);
 
+
+
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
+
+  // Supported languages for speech recognition (memoized to prevent infinite loops)
+  const supportedLanguages = useMemo(() => [
+    { code: 'en-US', name: 'English (US)', flag: '🇺🇸' },
+    { code: 'en-GB', name: 'English (UK)', flag: '🇬🇧' },
+    { code: 'de-DE', name: 'German', flag: '🇩🇪' },
+    { code: 'fr-FR', name: 'French', flag: '🇫🇷' },
+    { code: 'es-ES', name: 'Spanish', flag: '🇪🇸' },
+    { code: 'it-IT', name: 'Italian', flag: '🇮🇹' },
+    { code: 'pt-PT', name: 'Portuguese', flag: '🇵🇹' },
+    { code: 'nl-NL', name: 'Dutch', flag: '🇳🇱' },
+    { code: 'ru-RU', name: 'Russian', flag: '🇷🇺' },
+    { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko-KR', name: 'Korean', flag: '🇰🇷' },
+    { code: 'zh-CN', name: 'Chinese (Simplified)', flag: '🇨🇳' },
+    { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦' }
+  ], []); // Empty dependency array - this array never changes
 
   // --- Memoized Values ---
   const filteredConversations = useMemo(() => {
@@ -419,6 +983,9 @@ export default function App() {
       if (openDropdownId && !event.target.closest('.conversation-dropdown') && !event.target.closest('.dropdown-toggle')) {
         setOpenDropdownId(null);
       }
+      if (showLanguageSelector && !event.target.closest('.language-selector') && !event.target.closest('.language-toggle')) {
+        setShowLanguageSelector(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -428,7 +995,7 @@ export default function App() {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [isMobile, isSidebarOpen, openDropdownId]);
+  }, [isMobile, isSidebarOpen, openDropdownId, showLanguageSelector]);
 
   useEffect(() => {
     const chatContainer = chatContainerRef.current;
@@ -449,6 +1016,118 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  // Initialize speech recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      
+      if (autoDetectLanguage) {
+        // Create multiple recognition instances for auto-detection
+        const primaryLanguages = ['en-US', 'de-DE', 'fr-FR', 'es-ES', 'it-IT'];
+        const recognitionInstances = [];
+        
+        primaryLanguages.forEach(langCode => {
+          const recognitionInstance = new SpeechRecognition();
+          recognitionInstance.continuous = false;
+          recognitionInstance.interimResults = true;
+          recognitionInstance.lang = langCode;
+          
+          recognitionInstance.onresult = (event) => {
+            let finalTranscript = '';
+            let confidence = 0;
+            
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const result = event.results[i];
+              if (result.isFinal) {
+                finalTranscript += result[0].transcript;
+                confidence = result[0].confidence || 0;
+              }
+            }
+            
+            if (finalTranscript && confidence > 0.7) {
+              // Stop all recognition instances
+              recognitionInstances.forEach(rec => {
+                try { rec.stop(); } catch (e) {}
+              });
+              
+              const detectedLang = supportedLanguages.find(lang => lang.code === langCode);
+              setDetectedLanguage(langCode);
+              setSpeechLanguage(langCode);
+              setInput(prev => prev + finalTranscript);
+              setIsRecording(false);
+              showToast(`Detected ${detectedLang?.name || langCode}: "${finalTranscript.substring(0, 30)}..."`, 'success');
+            }
+          };
+          
+          recognitionInstance.onerror = (event) => {
+            if (event.error !== 'aborted' && event.error !== 'no-speech') {
+              console.error(`Speech recognition error (${langCode}):`, event.error);
+            }
+          };
+          
+          recognitionInstances.push(recognitionInstance);
+        });
+        
+        setMultiRecognitions(recognitionInstances);
+      } else {
+        // Single language recognition (manual selection)
+        const recognitionInstance = new SpeechRecognition();
+        
+        recognitionInstance.continuous = false;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = speechLanguage;
+        
+        recognitionInstance.onstart = () => {
+          setIsRecording(true);
+          const selectedLanguage = supportedLanguages.find(lang => lang.code === speechLanguage);
+          showToast(`Listening in ${selectedLanguage?.name || speechLanguage}... Speak now`, 'info');
+        };
+        
+        recognitionInstance.onresult = (event) => {
+          let finalTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            }
+          }
+          
+          if (finalTranscript) {
+            setInput(prev => prev + finalTranscript);
+          }
+        };
+        
+        recognitionInstance.onend = () => {
+          setIsRecording(false);
+        };
+        
+        recognitionInstance.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+          
+          let errorMessage = 'Speech recognition error';
+          switch (event.error) {
+            case 'no-speech':
+              errorMessage = 'No speech detected. Try again.';
+              break;
+            case 'not-allowed':
+              errorMessage = 'Microphone access denied. Please allow microphone access.';
+              break;
+            case 'network':
+              errorMessage = 'Network error. Check your connection.';
+              break;
+            default:
+              errorMessage = `Speech recognition error: ${event.error}`;
+          }
+          showToast(errorMessage, 'error');
+        };
+        
+        setRecognition(recognitionInstance);
+      }
+    }
+  }, [showToast, speechLanguage, supportedLanguages, autoDetectLanguage]);
 
   const typeMessage = useCallback((messageId, content) => {
     setTypingMessageId(messageId);
@@ -816,30 +1495,88 @@ export default function App() {
       
       if (response.success) {
         // Update conversation ID if this was a new conversation
-        if (!currentConversationId && response.conversationId) {
+        const isNewConversation = !currentConversationId && response.conversationId;
+        if (isNewConversation) {
           setCurrentConversationId(response.conversationId);
         }
 
-        // Add AI response to UI
-        const botResponseId = Date.now().toString();
-        const botMessage = {
-          id: botResponseId,
-          role: 'assistant',
-          content: response.aiResponse.content,
-          timestamp: response.aiResponse.timestamp,
-          reaction: null,
-          isEdited: false,
-          model: response.aiResponse.model
-        };
+        // Reload conversations list to show new conversation or updated titles
+        try {
+          const conversationsResponse = await apiService.getConversations();
+          if (conversationsResponse.success) {
+            setPastConversations(conversationsResponse.conversations);
+          }
+        } catch (error) {
+          console.error('Failed to reload conversations:', error);
+        }
 
-        setMessages(prev => [...prev, botMessage]);
-        
-        // Start typing animation
-        setTimeout(() => {
-          typeMessage(botResponseId, response.aiResponse.content);
-        }, 100);
+        // Check if approval is required (can be at top level or nested in aiResponse)
+        const requiresApproval = response.requiresApproval || (response.aiResponse && response.aiResponse.requiresApproval);
+        const pendingActions = response.pendingActions || (response.aiResponse && response.aiResponse.pendingActions);
+        const content = response.content || (response.aiResponse && response.aiResponse.content);
+        const timestamp = response.timestamp || (response.aiResponse && response.aiResponse.timestamp) || new Date().toISOString();
 
-        showToast('Response generated successfully!');
+        if (requiresApproval && pendingActions) {
+          // Add AI message asking for approval
+          const botResponseId = Date.now().toString();
+          const botMessage = {
+            id: botResponseId,
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            reaction: null,
+            isEdited: false
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+          
+          // Store pending actions and show approval modal
+          setPendingActions(pendingActions);
+          setShowApprovalModal(true);
+          
+          showToast('🔔 Action approval required');
+        } else {
+          // Add AI response to UI
+          const botResponseId = Date.now().toString();
+          const botMessage = {
+            id: botResponseId,
+            role: 'assistant',
+            content: content,
+            timestamp: timestamp,
+            reaction: null,
+            isEdited: false
+          };
+
+          setMessages(prev => [...prev, botMessage]);
+          
+          // Start typing animation
+          setTimeout(() => {
+            typeMessage(botResponseId, content);
+          }, 100);
+
+          // Check if there are executed actions (like calendar bookings) and show confirmation
+          const executedActions = response.executedActions || [];
+          if (executedActions.length > 0) {
+            const calendarBookings = executedActions.filter(
+              action => action.tool === 'book_calendar_event' && action.status === 'executed'
+            );
+            
+            if (calendarBookings.length > 0) {
+              // Show confirmation for calendar bookings
+              calendarBookings.forEach(booking => {
+                if (booking.result?.data?.htmlLink) {
+                  showToast(
+                    `✅ Calendar event booked! View it on Google Calendar`,
+                    'success',
+                    5000
+                  );
+                }
+              });
+            }
+          }
+          
+          showToast('Response generated successfully!');
+        }
       } else {
         throw new Error(response.error || 'Failed to get AI response');
       }
@@ -870,6 +1607,113 @@ export default function App() {
     }
   };
 
+  const handleApproveActions = async (actionIds) => {
+    try {
+      setShowApprovalModal(false);
+      setIsLoading(true);
+      showToast('Executing approved actions...', 'info');
+
+      const response = await apiService.request('/api/agent/actions/approve', {
+        method: 'POST',
+        body: JSON.stringify({
+          actionIds: actionIds,
+          conversationId: currentConversationId
+        })
+      });
+
+      if (response.success) {
+        // Format the execution confirmation message with enhanced UI
+        const botResponseId = Date.now().toString();
+        
+        // Parse the results to create a better formatted message
+        const results = response.results || [];
+        const hasCalendarBooking = results.some(r => 
+          r.success && r.result?.data?.htmlLink
+        );
+        
+        // Create enhanced content with better formatting
+        let enhancedContent = `**Actions Executed:**\n\n`;
+        
+        results.forEach((result, index) => {
+          if (result.success) {
+            enhancedContent += `✅ **${result.description || 'Action'}**\n`;
+            if (result.result?.data?.htmlLink) {
+              enhancedContent += `📅 [View on Google Calendar](${result.result.data.htmlLink})\n`;
+            }
+            if (result.result?.summary) {
+              enhancedContent += `${result.result.summary}\n`;
+            }
+          } else {
+            enhancedContent += `❌ **${result.description || 'Action'}**: ${result.error}\n`;
+          }
+          if (index < results.length - 1) enhancedContent += `\n`;
+        });
+        
+        enhancedContent += `\n---\n\n`;
+        if (response.successCount === response.totalCount) {
+          enhancedContent += `🎉 **All actions completed successfully!**`;
+        } else {
+          enhancedContent += `⚠️ ${response.successCount}/${response.totalCount} actions completed.`;
+        }
+        
+        const botMessage = {
+          id: botResponseId,
+          role: 'assistant',
+          content: enhancedContent,
+          timestamp: new Date().toISOString(),
+          reaction: null,
+          isEdited: false,
+          isExecutionConfirmation: true, // Flag for special styling
+          executionResults: results
+        };
+
+        setMessages(prev => [...prev, botMessage]);
+        setPendingActions([]);
+        showToast('✅ Actions executed successfully!');
+      } else {
+        throw new Error(response.error || 'Failed to execute actions');
+      }
+    } catch (error) {
+      console.error('Failed to approve actions:', error);
+      showToast('Failed to execute actions. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRejectActions = async () => {
+    try {
+      setShowApprovalModal(false);
+      
+      if (pendingActions.length > 0) {
+        const actionIds = pendingActions.map(a => a.actionId);
+        await apiService.request('/api/agent/actions/reject', {
+          method: 'POST',
+          body: JSON.stringify({ actionIds })
+        });
+      }
+
+      setPendingActions([]);
+      showToast('Actions cancelled');
+
+      // Add cancellation message to chat
+      const botResponseId = Date.now().toString();
+      const botMessage = {
+        id: botResponseId,
+        role: 'assistant',
+        content: 'Actions cancelled. How else can I help you?',
+        timestamp: new Date().toISOString(),
+        reaction: null,
+        isEdited: false
+      };
+
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Failed to reject actions:', error);
+      showToast('Failed to cancel actions', 'error');
+    }
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -878,12 +1722,71 @@ export default function App() {
   };
 
   const toggleVoiceMode = () => {
-    setIsVoiceMode(!isVoiceMode);
-    if (!isVoiceMode) {
-      showToast('Voice mode activated (demo)');
+    if (autoDetectLanguage) {
+      // Auto-detection mode
+      if (!multiRecognitions.length) {
+        showToast('Speech recognition not supported in this browser', 'error');
+        return;
+      }
+
+      if (isRecording) {
+        // Stop all recognition instances
+        multiRecognitions.forEach(rec => {
+          try { rec.stop(); } catch (e) {}
+        });
+        setIsRecording(false);
+        showToast('Voice recording stopped');
+      } else {
+        try {
+          setIsRecording(true);
+          showToast('Auto-detecting language... Speak now', 'info');
+          
+          // Start all recognition instances
+          multiRecognitions.forEach(rec => {
+            try { rec.start(); } catch (e) {}
+          });
+          
+          // Auto-stop after 10 seconds if no detection
+          setTimeout(() => {
+            if (isRecording) {
+              multiRecognitions.forEach(rec => {
+                try { rec.stop(); } catch (e) {}
+              });
+              setIsRecording(false);
+            }
+          }, 10000);
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          showToast('Failed to start voice recording', 'error');
+          setIsRecording(false);
+        }
+      }
     } else {
-      showToast('Voice mode deactivated');
+      // Manual selection mode
+      if (!recognition) {
+        showToast('Speech recognition not supported in this browser', 'error');
+        return;
+      }
+
+      if (isRecording) {
+        recognition.stop();
+        showToast('Voice recording stopped');
+      } else {
+        try {
+          recognition.start();
+        } catch (error) {
+          console.error('Error starting speech recognition:', error);
+          showToast('Failed to start voice recording', 'error');
+        }
+      }
     }
+  };
+
+  const handleLanguageSelect = (languageCode) => {
+    setSpeechLanguage(languageCode);
+    setShowLanguageSelector(false);
+    const selectedLanguage = supportedLanguages.find(lang => lang.code === languageCode);
+    showToast(`Speech language changed to ${selectedLanguage?.name || languageCode}`);
   };
 
   const stopGeneration = () => {
@@ -923,10 +1826,10 @@ export default function App() {
       };
     } else {
       return {
-        icon: isVoiceMode ? MicOff : Mic,
+        icon: isRecording ? MicOff : Mic,
         onClick: toggleVoiceMode,
-        className: `voice-btn ${isVoiceMode ? 'active' : ''}`,
-        title: "Voice input",
+        className: `voice-btn ${isRecording ? 'recording' : ''}`,
+        title: isRecording ? "Stop recording" : "Start voice input",
         disabled: isLoading || isGenerating || typingMessageId
       };
     }
@@ -1128,17 +2031,232 @@ export default function App() {
             {!isSidebarCollapsed && <span>Archived ({archivedConversations.length})</span>}
           </button>
           
-          {!isSidebarCollapsed && (
-            <div className="user-section">
-              <div style={{ 
-                padding: '10px', 
-                textAlign: 'center', 
-                fontSize: '12px', 
-                color: '#666',
-                borderTop: '1px solid #eee'
-              }}>
-                Single User Mode - No Login Required
-              </div>
+          {!isSidebarCollapsed && user && (
+            <div className="user-section" style={{ position: 'relative', marginLeft: '-30px' }}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  width: 'calc(100% + 8px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border-color)',
+                  marginTop: '8px',
+                  background: showUserMenu ? 'var(--hover-color)' : 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  borderRadius: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  if (!showUserMenu) e.currentTarget.style.background = 'var(--hover-color)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!showUserMenu) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: user?.user_metadata?.avatar_url
+                    ? `url(${user.user_metadata.avatar_url}) center/cover`
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '16px',
+                  flexShrink: 0
+                }}>
+                  {!user?.user_metadata?.avatar_url && (user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
+                </div>
+                <div style={{
+                  flex: 1,
+                  minWidth: 0,
+                  textAlign: 'left'
+                }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'}
+                  </div>
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#999',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {user.email}
+                  </div>
+                </div>
+                <MoreHorizontal size={18} style={{ color: '#999', flexShrink: 0 }} />
+              </button>
+
+              {showUserMenu && (
+                <>
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 998
+                    }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 'calc(100% + 8px)',
+                    left: 0,
+                    right: 0,
+                    margin: '0 8px',
+                    background: isDarkMode ? '#2c2c2c' : '#ffffff',
+                    border: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
+                    borderRadius: '12px',
+                    boxShadow: isDarkMode 
+                      ? '0 -8px 24px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)' 
+                      : '0 -8px 24px rgba(0, 0, 0, 0.12)',
+                    zIndex: 1000,
+                    overflow: 'hidden'
+                  }}>
+                    {/* User Info Header */}
+                    <div style={{
+                      padding: '16px',
+                      borderBottom: `1px solid ${isDarkMode ? '#3f3f3f' : '#e5e7eb'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: user?.user_metadata?.avatar_url
+                          ? `url(${user.user_metadata.avatar_url}) center/cover`
+                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '20px',
+                        flexShrink: 0
+                      }}>
+                        {!user?.user_metadata?.avatar_url && (user.user_metadata?.display_name || user.email || 'U')[0].toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {user.user_metadata?.display_name || user.email?.split('@')[0] || 'User'}
+                        </div>
+                        <div style={{
+                          fontSize: '13px',
+                          color: isDarkMode ? '#9ca3af' : '#6b7280',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {user?.email}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div style={{ padding: '8px' }}>
+                      {/* Profile Settings */}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowProfileSettings(true);
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <Settings size={18} />
+                        Profile Settings
+                      </button>
+
+                      {/* Divider */}
+                      <div style={{
+                        height: '1px',
+                        background: isDarkMode ? '#3f3f3f' : '#e5e7eb',
+                        margin: '4px 0'
+                      }} />
+
+                      {/* Log out */}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          onSignOut();
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px 16px',
+                          background: 'transparent',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          color: isDarkMode ? '#e5e7eb' : '#1f2937',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.15s ease',
+                          textAlign: 'left',
+                          fontFamily: 'inherit'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = isDarkMode ? '#3f3f3f' : '#f3f4f6';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <LogOut size={18} />
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1218,10 +2336,100 @@ export default function App() {
                       </div>
                     ) : (
                       <>
-                        <div className="message-text">
-                          {msg.role === 'assistant' && displayedContent[msg.id] !== undefined
-                            ? displayedContent[msg.id]
-                            : msg.content}
+                        <div className={`message-text ${msg.isExecutionConfirmation ? 'execution-confirmation' : ''}`}>
+                          {msg.role === 'assistant' ? (
+                            msg.isExecutionConfirmation ? (
+                              // Special rendering for execution confirmation messages
+                              <div className="execution-confirmation-card">
+                                <div className="execution-header">
+                                  <div className="execution-icon">
+                                    <CheckCircle size={24} style={{ color: '#10b981' }} />
+                                  </div>
+                                  <h3 className="execution-title">Actions Executed</h3>
+                                </div>
+                                
+                                <div className="execution-actions">
+                                  {msg.executionResults?.map((result, index) => (
+                                    <div key={index} className={`execution-action-item ${result.success ? 'success' : 'error'}`}>
+                                      <div className="action-status">
+                                        {result.success ? (
+                                          <CheckCircle size={20} style={{ color: '#10b981' }} />
+                                        ) : (
+                                          <XCircle size={20} style={{ color: '#ef4444' }} />
+                                        )}
+                                      </div>
+                                      <div className="action-content">
+                                        <div className="action-title">{result.description || 'Action'}</div>
+                                        {result.success && result.result?.summary && (
+                                          <div className="action-summary">{result.result.summary}</div>
+                                        )}
+                                        {result.success && result.result?.data?.htmlLink && (
+                                          <a 
+                                            href={result.result.data.htmlLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="action-link"
+                                          >
+                                            <Calendar size={16} />
+                                            View on Google Calendar
+                                          </a>
+                                        )}
+                                        {!result.success && (
+                                          <div className="action-error">Error: {result.error}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                
+                                <div className="execution-footer">
+                                  {msg.executionResults?.every(r => r.success) ? (
+                                    <div className="execution-success-message">
+                                      <span className="success-emoji">🎉</span>
+                                      <span className="success-text">All actions completed successfully!</span>
+                                    </div>
+                                  ) : (
+                                    <div className="execution-warning-message">
+                                      <span className="warning-emoji">⚠️</span>
+                                      <span className="warning-text">
+                                        {msg.executionResults?.filter(r => r.success).length}/{msg.executionResults?.length} actions completed
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <ReactMarkdown 
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  // Custom styling for markdown elements
+                                  p: ({node, ...props}) => <p style={{marginBottom: '0.8em'}} {...props} />,
+                                  strong: ({node, ...props}) => <strong style={{fontWeight: 600, color: 'var(--text-primary)'}} {...props} />,
+                                  ul: ({node, ...props}) => <ul style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                  ol: ({node, ...props}) => <ol style={{marginLeft: '1.2em', marginBottom: '0.8em'}} {...props} />,
+                                  li: ({node, ...props}) => <li style={{marginBottom: '0.4em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h1: ({node, ...props}) => <h1 style={{fontSize: '1.4em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h2: ({node, ...props}) => <h2 style={{fontSize: '1.2em', fontWeight: 600, marginBottom: '0.5em'}} {...props} />,
+                                  // eslint-disable-next-line jsx-a11y/heading-has-content
+                                  h3: ({node, ...props}) => <h3 style={{fontSize: '1.1em', fontWeight: 600, marginBottom: '0.4em'}} {...props} />,
+                                  code: ({node, inline, ...props}) => 
+                                    inline 
+                                      ? <code style={{background: 'var(--surface-secondary)', padding: '0.2em 0.4em', borderRadius: '3px', fontSize: '0.9em'}} {...props} />
+                                      : <code style={{display: 'block', background: 'var(--surface-secondary)', padding: '1em', borderRadius: '6px', overflow: 'auto', fontSize: '0.9em'}} {...props} />
+                                }}
+                              >
+                                {displayedContent[msg.id] !== undefined
+                                  ? displayedContent[msg.id]
+                                  : msg.content}
+                              </ReactMarkdown>
+                            )
+                          ) : (
+                            <>
+                              {msg.content}
+                            </>
+                          )}
                           {typingMessageId === msg.id && (
                             <span className="typing-cursor">|</span>
                           )}
@@ -1315,9 +2523,14 @@ export default function App() {
                 <div className="input-actions-left">
                   <button
                     type="button"
-                    onClick={() => setShowFileUpload(true)}
-                    className="file-btn"
-                    title="Upload files"
+                    onClick={(e) => e.preventDefault()}
+                    className="file-btn disabled"
+                    title="Coming soon"
+                    disabled
+                    style={{
+                      cursor: 'not-allowed',
+                      opacity: 0.5
+                    }}
                   >
                     <Paperclip className="icon" />
                   </button>
@@ -1335,6 +2548,67 @@ export default function App() {
                 />
                 
                 <div className="input-actions-right">
+                  {/* Language selector for speech recognition */}
+                  {!input.trim() && (
+                    <div className="language-selector-container">
+                      <button
+                        type="button"
+                        onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                        className="language-toggle"
+                        title={autoDetectLanguage ? "Auto-detecting language" : "Select speech language"}
+                      >
+                        {autoDetectLanguage ? '🌐' : (supportedLanguages.find(lang => lang.code === speechLanguage)?.flag || '🌐')}
+                      </button>
+                      
+                      {showLanguageSelector && (
+                        <div className="language-selector">
+                          <div className="language-mode-toggle">
+                            <button
+                              onClick={() => setAutoDetectLanguage(!autoDetectLanguage)}
+                              className={`mode-toggle-btn ${autoDetectLanguage ? 'active' : ''}`}
+                            >
+                              🤖 Auto-detect
+                            </button>
+                            <button
+                              onClick={() => setAutoDetectLanguage(false)}
+                              className={`mode-toggle-btn ${!autoDetectLanguage ? 'active' : ''}`}
+                            >
+                              🎯 Manual
+                            </button>
+                          </div>
+                          
+                          {detectedLanguage && autoDetectLanguage && (
+                            <div className="detected-language">
+                              <span className="detected-label">Last detected:</span>
+                              <span className="detected-flag">
+                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.flag}
+                              </span>
+                              <span className="detected-name">
+                                {supportedLanguages.find(lang => lang.code === detectedLanguage)?.name}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {!autoDetectLanguage && (
+                            <>
+                              {supportedLanguages.map(language => (
+                                <button
+                                  key={language.code}
+                                  onClick={() => handleLanguageSelect(language.code)}
+                                  className={`language-option ${speechLanguage === language.code ? 'active' : ''}`}
+                                  title={language.name}
+                                >
+                                  <span className="language-flag">{language.flag}</span>
+                                  <span className="language-name">{language.name}</span>
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {(() => {
                     const buttonConfig = getInputButton();
                     const IconComponent = buttonConfig.icon;
@@ -1359,6 +2633,32 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Profile Settings Modal */}
+      {showProfileSettings && (
+        <ProfileSettingsModal
+          user={user}
+          isDarkMode={isDarkMode}
+          onClose={() => setShowProfileSettings(false)}
+          onUpdate={(updatedData) => {
+            // Handle profile update
+            console.log('Profile updated:', updatedData);
+            setShowProfileSettings(false);
+          }}
+          authFunctions={authFunctions}
+        />
+      )}
+
+      {/* Action Approval Modal */}
+      <ActionApprovalModal
+        actions={pendingActions}
+        isOpen={showApprovalModal}
+        onApprove={handleApproveActions}
+        onReject={handleRejectActions}
+        onClose={() => setShowApprovalModal(false)}
+      />
     </div>
   );
 }
+
+export default App;

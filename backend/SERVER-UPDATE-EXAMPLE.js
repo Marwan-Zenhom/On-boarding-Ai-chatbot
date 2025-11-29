@@ -1,12 +1,33 @@
+/**
+ * Server.js Update Example
+ * Add these lines to your existing server.js to enable agent functionality
+ */
+
+// ============================================================================
+// 1. ADD IMPORTS (after existing imports, around line 10)
+// ============================================================================
+
+import agentRoutes from './routes/agentRoutes.js';
+import googleAuthRoutes from './routes/googleAuthRoutes.js';
+
+// ============================================================================
+// 2. ADD ROUTES (after existing routes, around line 74)
+// ============================================================================
+
+// AI Agent routes
+app.use('/api/agent', chatRoutes); // Keep existing chat routes
+app.use('/api/agent', agentRoutes); // Add new agent routes
+app.use('/api/google-auth', googleAuthRoutes); // Add Google OAuth routes
+
+// ============================================================================
+// 3. COMPLETE UPDATED SERVER.JS (Copy this if you want to replace)
+// ============================================================================
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-<<<<<<< HEAD
-import { ensureMainUser } from './config/database.js';
-import chatRoutes from './routes/chatRoutes.js';
-=======
 import rateLimit from 'express-rate-limit';
 import { ensureMainUser } from './config/database.js';
 import chatRoutes from './routes/chatRoutes.js';
@@ -14,22 +35,11 @@ import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import googleAuthRoutes from './routes/googleAuthRoutes.js';
 import logger from './config/logger.js';
->>>>>>> feature/code-quality
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-<<<<<<< HEAD
-const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-// Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-
-=======
 const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -38,8 +48,8 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Stricter rate limit for authentication endpoints
@@ -47,7 +57,7 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 auth requests per windowMs
   message: 'Too many authentication attempts, please try again later.',
-  skipSuccessfulRequests: true, // Don't count successful requests
+  skipSuccessfulRequests: true,
 });
 
 // Security: Helmet with enhanced options
@@ -69,7 +79,6 @@ app.use(helmet({
 }));
 
 // Security: CORS with specific origins
->>>>>>> feature/code-quality
 app.use(cors({
   origin: [FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true,
@@ -77,30 +86,21 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-<<<<<<< HEAD
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Routes
-app.use('/api/chat', chatRoutes);
-=======
 // Logging: Morgan with Winston stream
 app.use(morgan('combined', { stream: logger.stream }));
 
 // Security: Limit request body size
-app.use(express.json({ limit: '1mb' })); // Reduced from 10mb
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Apply rate limiting to all API routes
 app.use('/api/', limiter);
 
-// Routes (auth routes get stricter rate limiting)
+// Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/google-auth', googleAuthRoutes);
->>>>>>> feature/code-quality
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -108,9 +108,6 @@ app.get('/api/health', (req, res) => {
     success: true, 
     message: 'Onboarding Chat Backend is running!',
     timestamp: new Date().toISOString(),
-<<<<<<< HEAD
-    environment: process.env.NODE_ENV || 'development'
-=======
     environment: process.env.NODE_ENV || 'development',
     features: {
       chat: true,
@@ -118,16 +115,11 @@ app.get('/api/health', (req, res) => {
       aiAgent: true,
       googleIntegration: !!process.env.GOOGLE_CLIENT_ID
     }
->>>>>>> feature/code-quality
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-<<<<<<< HEAD
-  console.error('Error:', err);
-  res.status(500).json({ 
-=======
   logger.logError(err, {
     method: req.method,
     url: req.originalUrl,
@@ -136,7 +128,6 @@ app.use((err, req, res, next) => {
   });
   
   res.status(err.status || 500).json({ 
->>>>>>> feature/code-quality
     success: false, 
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
@@ -157,16 +148,6 @@ const startServer = async () => {
     await ensureMainUser();
     
     app.listen(PORT, () => {
-<<<<<<< HEAD
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`💾 Database: ${process.env.SUPABASE_URL ? 'Connected' : 'Not configured'}`);
-      console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured' : 'Not configured'}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-=======
       logger.info('='.repeat(50));
       logger.info('🚀 Onboarding Chat Backend Started');
       logger.info('='.repeat(50));
@@ -175,17 +156,23 @@ const startServer = async () => {
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`Database: ${process.env.SUPABASE_URL ? 'Connected ✅' : 'Not configured ❌'}`);
       logger.info(`Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured ✅' : 'Not configured ❌'}`);
-      logger.info(`Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured ✅' : 'Not configured ⚠️'}`);
+      logger.info(`Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured ✅' : 'Not configured ❌'}`);
       logger.info(`AI Agent: Enabled ✅`);
       logger.info('='.repeat(50));
     });
   } catch (error) {
     logger.error('Failed to start server', { error: error.message, stack: error.stack });
->>>>>>> feature/code-quality
     process.exit(1);
   }
 };
 
 startServer();
 
-export default app; 
+export default app;
+
+
+
+
+
+
+

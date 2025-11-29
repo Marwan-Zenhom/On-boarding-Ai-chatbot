@@ -1,12 +1,13 @@
 import { generateResponse, generateStreamResponse } from '../services/geminiService.js';
-import { supabase } from '../config/database.js';
-
-const FIXED_USER_ID = process.env.FIXED_USER_ID || '550e8400-e29b-41d4-a716-446655440000';
+import { AIAgent } from '../services/agentService.js';
+import { supabase, supabaseAdmin } from '../config/database.js';
+import logger from '../config/logger.js';
 
 // POST /api/chat/message
 export const sendMessage = async (req, res) => {
   try {
     const { message, conversationId, files } = req.body;
+    const userId = req.user.id; // Get authenticated user ID
 
     if (!message || !message.trim()) {
       return res.status(400).json({ 
@@ -18,7 +19,22 @@ export const sendMessage = async (req, res) => {
     // Get conversation history for context
     let conversationHistory = [];
     if (conversationId) {
-      const { data: messages } = await supabase
+      // Verify user owns this conversation
+      const { data: conversation } = await supabaseAdmin
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single();
+
+      if (!conversation) {
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Unauthorized access to conversation' 
+        });
+      }
+
+      const { data: messages } = await supabaseAdmin
         .from('messages')
         .select('role, content')
         .eq('conversation_id', conversationId)
@@ -27,9 +43,6 @@ export const sendMessage = async (req, res) => {
       conversationHistory = messages || [];
     }
 
-    // Generate AI response using Gemini
-    const aiResponse = await generateResponse(message.trim(), conversationHistory);
-
     // Create conversation if it doesn't exist
     let currentConversationId = conversationId;
     if (!currentConversationId) {
@@ -37,10 +50,10 @@ export const sendMessage = async (req, res) => {
         ? message.substring(0, 30) + '...' 
         : message;
       
-      const { data: newConversation, error: convError } = await supabase
+      const { data: newConversation, error: convError } = await supabaseAdmin
         .from('conversations')
         .insert([{
-          user_id: FIXED_USER_ID,
+          user_id: userId, // Use authenticated user ID from auth.users
           title,
           is_favourite: false,
           is_archived: false
@@ -49,10 +62,72 @@ export const sendMessage = async (req, res) => {
         .single();
 
       if (convError) {
+        logger.error('Failed to create conversation', { 
+          userId, 
+          error: convError.message,
+          code: convError.code,
+          hint: convError.hint
+        });
+        
+        // Provide more helpful error message for foreign key violation
+        if (convError.code === '23503') { // Foreign key violation
+          // Check if user exists in auth.users using a simple query
+          const { data: userCheck } = await supabaseAdmin.rpc('check_user_exists', { user_uuid: userId })
+            .catch(() => ({ data: null }));
+          
+          return res.status(400).json({
+            success: false,
+            error: 'User account issue',
+            message: 'Your user account is not properly set up in the database. This usually happens after restoring from a backup. Please try logging out and logging back in, or contact support.',
+            details: `User ID: ${userId}. The user may not exist in auth.users table.`
+          });
+        }
+        
         throw new Error(`Failed to create conversation: ${convError.message}`);
       }
 
       currentConversationId = newConversation.id;
+    }
+
+    // Try to use AI Agent, fallback to old service if agent not set up yet
+    let agentResponse;
+    try {
+      const agent = new AIAgent(userId, currentConversationId);
+      agentResponse = await agent.processRequest(message.trim(), conversationHistory);
+    } catch (agentError) {
+      // Agent might fail if tables don't exist yet - fallback to old service
+      logger.warn('Agent failed, falling back to old Gemini service', { error: agentError.message });
+      const oldResponse = await generateResponse(message.trim(), conversationHistory);
+      agentResponse = {
+        success: oldResponse.success,
+        content: oldResponse.content,
+        requiresApproval: false,
+        executedActions: []
+      };
+    }
+
+    // Check if agent needs approval
+    if (agentResponse.requiresApproval) {
+      // Save user message only
+      await supabaseAdmin
+        .from('messages')
+        .insert([{
+          conversation_id: currentConversationId,
+          role: 'user',
+          content: message.trim(),
+          timestamp: new Date().toISOString(),
+          files: files || null
+        }]);
+
+      // Return response with pending actions
+      return res.json({
+        success: true,
+        conversationId: currentConversationId,
+        requiresApproval: true,
+        pendingActions: agentResponse.pendingActions,
+        content: agentResponse.content,
+        executedActions: agentResponse.executedActions || []
+      });
     }
 
     // Save both user message and AI response to database
@@ -67,13 +142,13 @@ export const sendMessage = async (req, res) => {
       {
         conversation_id: currentConversationId,
         role: 'assistant',
-        content: aiResponse.content,
+        content: agentResponse.content,
         timestamp: new Date().toISOString(),
         files: null
       }
     ];
 
-    const { error: messageError } = await supabase
+    const { error: messageError } = await supabaseAdmin
       .from('messages')
       .insert(messagesToInsert);
 
@@ -93,14 +168,15 @@ export const sendMessage = async (req, res) => {
       },
       aiResponse: {
         role: 'assistant',
-        content: aiResponse.content,
+        content: agentResponse.content,
         timestamp: messagesToInsert[1].timestamp,
-        model: aiResponse.model
-      }
+        model: 'ai-agent'
+      },
+      executedActions: agentResponse.executedActions || []
     });
 
   } catch (error) {
-    console.error('Chat error:', error);
+    logger.error('Chat error', { error: error.message, userId: req.user.id, conversationId: req.body.conversationId });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to process message'
@@ -197,7 +273,7 @@ export const regenerateResponse = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Regenerate error:', error);
+    logger.error('Regenerate error', { error: error.message, userId: req.user.id, conversationId: req.body.conversationId });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to regenerate response'
@@ -208,13 +284,16 @@ export const regenerateResponse = async (req, res) => {
 // GET /api/chat/conversations
 export const getConversations = async (req, res) => {
   try {
-    const { data: conversations, error } = await supabase
+    const userId = req.user.id; // Get authenticated user ID
+
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    const { data: conversations, error } = await supabaseAdmin
       .from('conversations')
       .select(`
         *,
         messages (*)
       `)
-      .eq('user_id', FIXED_USER_ID)
+      .eq('user_id', userId) // CRITICAL: Filter by authenticated user for data isolation
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -227,7 +306,7 @@ export const getConversations = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error('Get conversations error', { error: error.message, userId: req.user.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to fetch conversations'
@@ -240,12 +319,14 @@ export const updateConversation = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const userId = req.user.id; // Get authenticated user ID
 
-    const { error } = await supabase
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    const { error } = await supabaseAdmin
       .from('conversations')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', FIXED_USER_ID);
+      .eq('user_id', userId); // CRITICAL: Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to update conversation: ${error.message}`);
@@ -257,7 +338,7 @@ export const updateConversation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Update conversation error:', error);
+    logger.error('Update conversation error', { error: error.message, userId: req.user.id, conversationId: req.params.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to update conversation'
@@ -269,19 +350,17 @@ export const updateConversation = async (req, res) => {
 export const deleteConversation = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id; // Get authenticated user ID
 
-    // Delete messages first (due to foreign key constraint)
-    await supabase
-      .from('messages')
-      .delete()
-      .eq('conversation_id', id);
+    // Use supabaseAdmin but filter by user_id to ensure data isolation
+    // Messages will be deleted via CASCADE foreign key constraint
     
-    // Then delete conversation
-    const { error } = await supabase
+    // Delete conversation (messages will be deleted via CASCADE)
+    const { error } = await supabaseAdmin
       .from('conversations')
       .delete()
       .eq('id', id)
-      .eq('user_id', FIXED_USER_ID);
+      .eq('user_id', userId); // CRITICAL: Ensure user owns the conversation
 
     if (error) {
       throw new Error(`Failed to delete conversation: ${error.message}`);
@@ -293,7 +372,7 @@ export const deleteConversation = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Delete conversation error:', error);
+    logger.error('Delete conversation error', { error: error.message, userId: req.user.id, conversationId: req.params.id });
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Failed to delete conversation'
