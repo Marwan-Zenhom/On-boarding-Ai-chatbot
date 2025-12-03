@@ -3,10 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-<<<<<<< HEAD
-import { ensureMainUser } from './config/database.js';
-import chatRoutes from './routes/chatRoutes.js';
-=======
 import rateLimit from 'express-rate-limit';
 import { ensureMainUser } from './config/database.js';
 import chatRoutes from './routes/chatRoutes.js';
@@ -14,22 +10,11 @@ import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import googleAuthRoutes from './routes/googleAuthRoutes.js';
 import logger from './config/logger.js';
->>>>>>> feature/code-quality
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-<<<<<<< HEAD
-const PORT = process.env.PORT || 5000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-// Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-
-=======
 const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -69,7 +54,6 @@ app.use(helmet({
 }));
 
 // Security: CORS with specific origins
->>>>>>> feature/code-quality
 app.use(cors({
   origin: [FRONTEND_URL, 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
   credentials: true,
@@ -77,14 +61,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-<<<<<<< HEAD
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Routes
-app.use('/api/chat', chatRoutes);
-=======
 // Logging: Morgan with Winston stream
 app.use(morgan('combined', { stream: logger.stream }));
 
@@ -100,7 +76,6 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/google-auth', googleAuthRoutes);
->>>>>>> feature/code-quality
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -108,9 +83,6 @@ app.get('/api/health', (req, res) => {
     success: true, 
     message: 'Onboarding Chat Backend is running!',
     timestamp: new Date().toISOString(),
-<<<<<<< HEAD
-    environment: process.env.NODE_ENV || 'development'
-=======
     environment: process.env.NODE_ENV || 'development',
     features: {
       chat: true,
@@ -118,16 +90,11 @@ app.get('/api/health', (req, res) => {
       aiAgent: true,
       googleIntegration: !!process.env.GOOGLE_CLIENT_ID
     }
->>>>>>> feature/code-quality
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-<<<<<<< HEAD
-  console.error('Error:', err);
-  res.status(500).json({ 
-=======
   logger.logError(err, {
     method: req.method,
     url: req.originalUrl,
@@ -135,8 +102,7 @@ app.use((err, req, res, next) => {
     userId: req.user?.userId || 'anonymous',
   });
   
-  res.status(err.status || 500).json({ 
->>>>>>> feature/code-quality
+  res.status(err.status || 500).json({
     success: false, 
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
@@ -157,16 +123,6 @@ const startServer = async () => {
     await ensureMainUser();
     
     app.listen(PORT, () => {
-<<<<<<< HEAD
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Frontend URL: ${FRONTEND_URL}`);
-      console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`💾 Database: ${process.env.SUPABASE_URL ? 'Connected' : 'Not configured'}`);
-      console.log(`🤖 Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured' : 'Not configured'}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-=======
       logger.info('='.repeat(50));
       logger.info('🚀 Onboarding Chat Backend Started');
       logger.info('='.repeat(50));
@@ -181,7 +137,6 @@ const startServer = async () => {
     });
   } catch (error) {
     logger.error('Failed to start server', { error: error.message, stack: error.stack });
->>>>>>> feature/code-quality
     process.exit(1);
   }
 };

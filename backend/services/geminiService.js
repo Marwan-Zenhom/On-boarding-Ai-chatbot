@@ -1,10 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
-<<<<<<< HEAD
-=======
 import { searchKnowledgeBase } from './knowledgeBaseService.js';
 import { searchKnowledgeBaseKeyword } from './keywordSearchService.js';
->>>>>>> feature/code-quality
 
 dotenv.config();
 
@@ -18,56 +15,6 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // Initialize Gemini model
 const model = genAI.getGenerativeModel({ 
-<<<<<<< HEAD
-  model: "gemini-1.5-flash",
-  generationConfig: {
-    temperature: 0.7,
-    topK: 1,
-    topP: 1,
-    maxOutputTokens: 2048,
-  }
-});
-
-// System prompt for onboarding assistant
-const SYSTEM_PROMPT = `You are a helpful onboarding assistant for a company. Your role is to help new employees get familiar with:
-
-• Company policies and procedures
-• Benefits and compensation details  
-• IT setup and access requirements
-• Team introductions and organizational structure
-• Training schedules and resources
-• Office locations and facilities
-• Workplace culture and guidelines
-• Professional development opportunities
-
-Guidelines:
-- Be friendly, professional, and welcoming
-- Provide clear, actionable information
-- Ask follow-up questions to better assist
-- If you don't know something specific, direct them to HR or their manager
-- Keep responses concise but helpful
-- Focus on onboarding-related topics
-
-Respond as if you're a knowledgeable HR assistant helping a new employee on their first day.`;
-
-export const generateResponse = async (userMessage, conversationHistory = []) => {
-  try {
-    // Build conversation context
-    let prompt = SYSTEM_PROMPT + '\n\nConversation:\n';
-    
-    // Add conversation history (last 5 messages for context)
-    const recentHistory = conversationHistory.slice(-5);
-    for (const msg of recentHistory) {
-      prompt += `${msg.role === 'user' ? 'Employee' : 'Assistant'}: ${msg.content}\n`;
-    }
-    
-    // Add current user message
-    prompt += `Employee: ${userMessage}\nAssistant:`;
-    
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-=======
   model: "gemini-2.0-flash",
   generationConfig: {
     temperature: 0.7,
@@ -237,17 +184,12 @@ Remember: You're not a formal assistant - you're a helpful friend showing them a
     }
     
     console.log('Successfully generated response from knowledge base');
->>>>>>> feature/code-quality
     
     return {
       success: true,
       content: text.trim(),
-<<<<<<< HEAD
-      model: 'gemini-1.5-flash'
-=======
       model: 'gemini-2.0-flash-kb',
       sources: relevantDocs.length
->>>>>>> feature/code-quality
     };
   } catch (error) {
     console.error('Gemini API Error:', error);
@@ -255,21 +197,7 @@ Remember: You're not a formal assistant - you're a helpful friend showing them a
     // Fallback response
     return {
       success: false,
-<<<<<<< HEAD
-      content: `I apologize, but I'm having trouble connecting to our AI systems right now. Please try again in a moment, or reach out to your HR representative for immediate assistance.
-
-In the meantime, here are some common onboarding topics I can help with:
-• Company policies and procedures
-• Benefits and compensation
-• IT setup and access
-• Team introductions
-• Training schedules
-• Office facilities
-
-What specific area would you like to know more about?`,
-=======
       content: `I apologize, but I'm having trouble processing your request right now. Please try again in a moment, or reach out to your HR representative for immediate assistance.`,
->>>>>>> feature/code-quality
       error: error.message,
       model: 'fallback'
     };
@@ -279,6 +207,7 @@ What specific area would you like to know more about?`,
 export const generateStreamResponse = async (userMessage, conversationHistory = []) => {
   try {
     // Build conversation context
+    const SYSTEM_PROMPT = "You are a friendly, helpful colleague at NovaTech. You're here to help new employees feel welcome and answer their questions naturally, like a friend would.";
     let prompt = SYSTEM_PROMPT + '\n\nConversation:\n';
     
     // Add conversation history (last 5 messages for context)
@@ -295,7 +224,7 @@ export const generateStreamResponse = async (userMessage, conversationHistory = 
     return {
       success: true,
       stream: result.stream,
-      model: 'gemini-1.5-flash'
+      model: 'gemini-2.0-flash'
     };
   } catch (error) {
     console.error('Gemini Streaming Error:', error);
