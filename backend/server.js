@@ -4,15 +4,22 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
-import { ensureMainUser } from './config/database.js';
 import chatRoutes from './routes/chatRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import agentRoutes from './routes/agentRoutes.js';
 import googleAuthRoutes from './routes/googleAuthRoutes.js';
 import logger from './config/logger.js';
+import { validateEnvOrExit } from './utils/envValidator.js';
+import { performHealthCheck, livenessCheck, readinessCheck } from './utils/healthCheck.js';
+import { initGracefulShutdown, shutdownMiddleware } from './utils/gracefulShutdown.js';
 
 // Load environment variables
 dotenv.config();
+
+// Validate environment variables (exits if invalid)
+if (process.env.NODE_ENV !== 'test') {
+  validateEnvOrExit();
+}
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -34,6 +41,9 @@ const authLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful requests
 });
+
+// Shutdown middleware - reject requests during shutdown
+app.use(shutdownMiddleware);
 
 // Security: Helmet with enhanced options
 app.use(helmet({
@@ -65,7 +75,7 @@ app.use(cors({
 app.use(morgan('combined', { stream: logger.stream }));
 
 // Security: Limit request body size
-app.use(express.json({ limit: '1mb' })); // Reduced from 10mb
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Apply rate limiting to all API routes
@@ -77,21 +87,67 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/google-auth', googleAuthRoutes);
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Onboarding Chat Backend is running!',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    features: {
-      chat: true,
-      authentication: true,
-      aiAgent: true,
-      googleIntegration: !!process.env.GOOGLE_CLIENT_ID
-    }
-  });
+// ============================================================================
+// Health Check Endpoints
+// ============================================================================
+
+/**
+ * GET /api/health
+ * Comprehensive health check - returns detailed status of all services
+ * Query params:
+ *   ?detailed=true - Include service-level details
+ */
+app.get('/api/health', async (req, res) => {
+  try {
+    const detailed = req.query.detailed === 'true';
+    const health = await performHealthCheck(detailed);
+    
+    const statusCode = health.status === 'healthy' ? 200 : 
+                       health.status === 'degraded' ? 200 : 503;
+    
+    res.status(statusCode).json({
+      success: health.status !== 'unhealthy',
+      ...health
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error: error.message });
+    res.status(503).json({
+      success: false,
+      status: 'unhealthy',
+      error: 'Health check failed'
+    });
+  }
 });
+
+/**
+ * GET /api/health/live
+ * Kubernetes liveness probe - is the server running?
+ */
+app.get('/api/health/live', (req, res) => {
+  const status = livenessCheck();
+  res.status(200).json(status);
+});
+
+/**
+ * GET /api/health/ready
+ * Kubernetes readiness probe - is the server ready to accept requests?
+ */
+app.get('/api/health/ready', async (req, res) => {
+  try {
+    const status = await readinessCheck();
+    const statusCode = status.status === 'ready' ? 200 : 503;
+    res.status(statusCode).json(status);
+  } catch (error) {
+    res.status(503).json({
+      status: 'not_ready',
+      error: error.message
+    });
+  }
+});
+
+// ============================================================================
+// Error Handling
+// ============================================================================
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -104,7 +160,8 @@ app.use((err, req, res, next) => {
   
   res.status(err.status || 500).json({
     success: false, 
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error',
+    code: 'SRV_9001'
   });
 });
 
@@ -112,17 +169,18 @@ app.use((err, req, res, next) => {
 app.use('*', (req, res) => {
   res.status(404).json({ 
     success: false, 
-    error: 'Endpoint not found' 
+    error: 'Endpoint not found',
+    code: 'RES_3001'
   });
 });
 
-// Start server
+// ============================================================================
+// Server Startup
+// ============================================================================
+
 const startServer = async () => {
   try {
-    // Ensure main user exists in database
-    await ensureMainUser();
-    
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       logger.info('='.repeat(50));
       logger.info('🚀 Onboarding Chat Backend Started');
       logger.info('='.repeat(50));
@@ -133,8 +191,19 @@ const startServer = async () => {
       logger.info(`Gemini AI: ${process.env.GEMINI_API_KEY ? 'Configured ✅' : 'Not configured ❌'}`);
       logger.info(`Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured ✅' : 'Not configured ⚠️'}`);
       logger.info(`AI Agent: Enabled ✅`);
+      logger.info(`Graceful Shutdown: Enabled ✅`);
+      logger.info('='.repeat(50));
+      logger.info('Health endpoints:');
+      logger.info(`  GET /api/health          - Full health check`);
+      logger.info(`  GET /api/health?detailed=true - Detailed check`);
+      logger.info(`  GET /api/health/live     - Liveness probe`);
+      logger.info(`  GET /api/health/ready    - Readiness probe`);
       logger.info('='.repeat(50));
     });
+
+    // Initialize graceful shutdown handlers
+    initGracefulShutdown(server);
+
   } catch (error) {
     logger.error('Failed to start server', { error: error.message, stack: error.stack });
     process.exit(1);
@@ -143,4 +212,4 @@ const startServer = async () => {
 
 startServer();
 
-export default app; 
+export default app;
