@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 import { searchKnowledgeBase } from './knowledgeBaseService.js';
 import { searchKnowledgeBaseKeyword } from './keywordSearchService.js';
+import { AI_MODELS } from '../constants/index.js';
 
 dotenv.config();
 
@@ -13,16 +14,21 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
+// Gemini generation configuration
+const GENERATION_CONFIG = {
+  temperature: 0.7,
+  topK: 40,
+  topP: 0.95,
+  maxOutputTokens: 2048
+};
+
+const SYSTEM_INSTRUCTION = `You are a friendly, helpful colleague at NovaTech. You're here to help new employees feel welcome and answer their questions naturally, like a friend would. You have excellent memory of the conversation and always understand context. Be warm, conversational, and supportive - never stiff or robotic.`;
+
 // Initialize Gemini model
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-2.0-flash",
-  generationConfig: {
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 2048,
-  },
-  systemInstruction: "You are a friendly, helpful colleague at NovaTech. You're here to help new employees feel welcome and answer their questions naturally, like a friend would. You have excellent memory of the conversation and always understand context. Be warm, conversational, and supportive - never stiff or robotic."
+  model: AI_MODELS.DEFAULT,
+  generationConfig: GENERATION_CONFIG,
+  systemInstruction: SYSTEM_INSTRUCTION
 });
 
 export const generateResponse = async (userMessage, conversationHistory = []) => {

@@ -10,6 +10,7 @@ import { availableTools, requiresApproval, getActionDescription } from './tools/
 import { ToolExecutor } from './tools/toolExecutor.js';
 import { supabase, supabaseAdmin } from '../config/database.js';
 import logger from '../config/logger.js';
+import { AI_MODELS, AGENT_CONFIG } from '../constants/index.js';
 
 dotenv.config();
 
@@ -20,7 +21,7 @@ export class AIAgent {
     this.userId = userId;
     this.conversationId = conversationId;
     this.toolExecutor = new ToolExecutor(userId);
-    this.maxIterations = 10; // Prevent infinite loops
+    this.maxIterations = AGENT_CONFIG.MAX_ITERATIONS;
     this.executedActions = []; // Track what was executed
   }
 
@@ -52,7 +53,7 @@ export class AIAgent {
 
       // Initialize Gemini with function calling capabilities
       const model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-exp",
+        model: AI_MODELS.DEFAULT,
         tools: [{ functionDeclarations: availableTools }],
         systemInstruction: this.getSystemInstruction()
       });
@@ -81,8 +82,15 @@ export class AIAgent {
         if (!functionCalls || functionCalls.length === 0) {
           finalResponse = response.text();
           logger.info('Agent decided not to call functions', {
-            responsePreview: finalResponse.substring(0, 100)
+            responsePreview: finalResponse ? finalResponse.substring(0, 100) : 'NO RESPONSE TEXT',
+            hasContent: !!finalResponse
           });
+          
+          // Ensure we have a valid response
+          if (!finalResponse || finalResponse.trim() === '') {
+            finalResponse = "I'm here to help! How can I assist you today?";
+            logger.warn('Empty response from Gemini, using fallback');
+          }
           break;
         }
         
