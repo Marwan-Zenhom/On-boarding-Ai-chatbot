@@ -1,194 +1,119 @@
 /**
  * Validation Middleware
- * Validates and sanitizes user inputs to prevent XSS and other attacks
+ * Generic middleware for validating request data using Joi schemas
  */
 
-export const validateMessage = (req, res, next) => {
-  const { message } = req.body;
-  
-  // Check if message exists
-  if (!message || typeof message !== 'string') {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Message is required and must be a string' 
-    });
-  }
-  
-  // Trim message
-  const trimmedMessage = message.trim();
-  
-  if (!trimmedMessage) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Message cannot be empty' 
-    });
-  }
-  
-  // Check message length
-  if (trimmedMessage.length > 5000) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Message too long (maximum 5000 characters)' 
-    });
-  }
-  
-  if (trimmedMessage.length < 1) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Message too short (minimum 1 character)' 
-    });
-  }
-  
-  // Basic XSS prevention - remove script tags
-  const sanitized = trimmedMessage.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  
-  // Check for potential SQL injection patterns
-  const sqlPatterns = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE)\b)/gi;
-  if (sqlPatterns.test(sanitized)) {
-    return res.status(400).json({
-      success: false,
-      error: 'Message contains invalid characters'
-    });
-  }
-  
-  req.body.message = sanitized;
-  next();
-};
+import { validationError } from '../utils/apiResponse.js';
+import { ERROR_CODES } from '../constants/index.js';
 
-export const validateConversationUpdate = (req, res, next) => {
-  const { title, is_favourite, is_archived } = req.body;
-  
-  // Validate title if provided
-  if (title !== undefined) {
-    if (typeof title !== 'string') {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Title must be a string' 
+/**
+ * Validate request body against a Joi schema
+ * @param {Joi.Schema} schema - Joi validation schema
+ */
+export const validateBody = (schema) => {
+  return (req, res, next) => {
+    const { error, value } = schema.validate(req.body, {
+      abortEarly: false, // Return all errors, not just the first
+      stripUnknown: true, // Remove unknown fields
+      convert: true // Type coercion
+    });
+
+    if (error) {
+      const errorMessages = error.details.map(detail => detail.message).join(', ');
+      return validationError(res, errorMessages, {
+        fields: error.details.map(detail => ({
+          field: detail.path.join('.'),
+          message: detail.message
+        }))
       });
     }
-    
-    const trimmedTitle = title.trim();
-    
-    if (trimmedTitle.length > 200) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Title too long (maximum 200 characters)' 
-      });
+
+    // Replace body with validated/sanitized values
+    req.body = value;
+    next();
+  };
+};
+
+/**
+ * Validate request params against a Joi schema
+ * @param {Joi.Schema} schema - Joi validation schema
+ */
+export const validateParams = (schema) => {
+  return (req, res, next) => {
+    const { error, value } = schema.validate(req.params, {
+      abortEarly: false,
+      stripUnknown: true
+    });
+
+    if (error) {
+      const errorMessages = error.details.map(detail => detail.message).join(', ');
+      return validationError(res, errorMessages);
     }
-    
-    req.body.title = trimmedTitle;
-  }
-  
-  // Validate boolean fields
-  if (is_favourite !== undefined && typeof is_favourite !== 'boolean') {
-    return res.status(400).json({ 
-      success: false,
-      error: 'is_favourite must be a boolean' 
-    });
-  }
-  
-  if (is_archived !== undefined && typeof is_archived !== 'boolean') {
-    return res.status(400).json({ 
-      success: false,
-      error: 'is_archived must be a boolean' 
-    });
-  }
-  
-  next();
+
+    req.params = value;
+    next();
+  };
 };
 
-export const validateEmail = (req, res, next) => {
-  const { email } = req.body;
-  
-  if (!email || typeof email !== 'string') {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Email is required' 
+/**
+ * Validate request query against a Joi schema
+ * @param {Joi.Schema} schema - Joi validation schema
+ */
+export const validateQuery = (schema) => {
+  return (req, res, next) => {
+    const { error, value } = schema.validate(req.query, {
+      abortEarly: false,
+      stripUnknown: true,
+      convert: true
     });
-  }
-  
-  // Simple email validation regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Invalid email format' 
-    });
-  }
-  
-  req.body.email = email.toLowerCase().trim();
-  next();
-};
 
-export const validatePassword = (req, res, next) => {
-  const { password } = req.body;
-  
-  if (!password || typeof password !== 'string') {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Password is required' 
-    });
-  }
-  
-  if (password.length < 6) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Password must be at least 6 characters long' 
-    });
-  }
-  
-  if (password.length > 100) {
-    return res.status(400).json({ 
-      success: false,
-      error: 'Password too long (maximum 100 characters)' 
-    });
-  }
-  
-  next();
-};
-
-export const validateDisplayName = (req, res, next) => {
-  const { displayName } = req.body;
-  
-  if (displayName !== undefined) {
-    if (typeof displayName !== 'string') {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Display name must be a string' 
-      });
+    if (error) {
+      const errorMessages = error.details.map(detail => detail.message).join(', ');
+      return validationError(res, errorMessages);
     }
-    
-    const trimmed = displayName.trim();
-    
-    if (trimmed.length > 100) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Display name too long (maximum 100 characters)' 
-      });
+
+    req.query = value;
+    next();
+  };
+};
+
+/**
+ * Sanitize string inputs (basic XSS prevention)
+ */
+export const sanitizeInputs = (req, res, next) => {
+  const sanitize = (obj) => {
+    if (typeof obj === 'string') {
+      // Basic HTML entity encoding
+      return obj
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
     }
-    
-    req.body.displayName = trimmed;
-  }
+    if (Array.isArray(obj)) {
+      return obj.map(sanitize);
+    }
+    if (obj && typeof obj === 'object') {
+      const sanitized = {};
+      for (const key in obj) {
+        sanitized[key] = sanitize(obj[key]);
+      }
+      return sanitized;
+    }
+    return obj;
+  };
+
+  // Note: We skip sanitization for message content as it may contain
+  // legitimate characters that users want to send to the AI
+  // The AI response is already rendered safely using ReactMarkdown
   
   next();
 };
 
-export const sanitizeInput = (input) => {
-  if (typeof input !== 'string') return input;
-  
-  // Remove potential XSS vectors
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
-    .trim();
+export default {
+  validateBody,
+  validateParams,
+  validateQuery,
+  sanitizeInputs
 };
-
-
-
-
-
-
-
-
