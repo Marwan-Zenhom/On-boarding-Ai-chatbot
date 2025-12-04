@@ -6,9 +6,10 @@
 ![React](https://img.shields.io/badge/Frontend-React_19-61DAFB?style=for-the-badge&logo=react)
 ![Express](https://img.shields.io/badge/Backend-Express.js-000000?style=for-the-badge&logo=express)
 ![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?style=for-the-badge&logo=supabase)
+![Tests](https://img.shields.io/badge/Tests-90_Passing-success?style=for-the-badge&logo=jest)
 
 **An enterprise-grade Agentic AI chatbot designed to streamline employee onboarding.**  
-*Powered by Google Gemini 2.0 Flash, RAG, and Autonomous Tool Use.*
+*Powered by Google Gemini 2.5 Flash, RAG, and Autonomous Tool Use.*
 
 [Features](#-features) • [Architecture](#-architecture) • [Quick Start](#-quick-start) • [Tech Stack](#-technology-stack)
 
@@ -21,8 +22,8 @@
 ### 🧠 Advanced Agentic AI ("Nova")
 - **Multi-Step Workflows:** Capable of executing complex tasks like *"Check my calendar for next week and book a meeting with John."*
 - **Autonomous Tool Use:** Intelligently utilizes a suite of tools:
-  - 📅 **Calendar:** Check availability and book events
-  - 📧 **Email:** Draft and send emails to colleagues
+  - 📅 **Calendar:** Check availability and book events (Google Calendar integration)
+  - 📧 **Email:** Draft and send emails to colleagues (Gmail integration)
   - 👥 **Directory:** Look up employee details and team structures
 - **Human-in-the-Loop:** Built-in **Approval Workflow** ensures no critical action (like sending emails) happens without your explicit confirmation via a secure UI.
 
@@ -32,20 +33,29 @@
 - **Smart Greeting System:** Bypasses expensive vector searches for natural, instant greetings.
 
 ### 🎨 Modern Frontend Experience
+- **Component Architecture:** Modular React components with custom hooks for clean separation of concerns.
 - **Human-in-the-Loop UI:** Dedicated `ActionApprovalModal` for reviewing and approving agent actions.
 - **Profile Management:** Complete avatar upload system and user profile settings.
-- **Design System:** Modular, responsive UI with native Dark/Light mode switching.
-- **Rich Interactions:** Markdown rendering, typing indicators, and message actions (copy, edit, regenerate).
+- **Theme System:** React Context-based Dark/Light mode with CSS variables.
+- **Performance Optimized:** React.memo, lazy loading, and Error Boundaries.
+- **Rich Interactions:** Markdown rendering, typing indicators, speech recognition, and message actions (copy, edit, regenerate).
 
-### 🛡️ Enterprise-Grade Resilience
+### 🛡️ Enterprise-Grade Backend
+- **Service Layer Architecture:** Clean separation between controllers, services, and data access.
+- **Input Validation:** Joi-based request validation with standardized error responses.
+- **Environment Validation:** Validates all required env vars on startup with clear error messages.
+- **Comprehensive Health Checks:** Multiple endpoints for monitoring (`/health`, `/health/live`, `/health/ready`).
+- **Graceful Shutdown:** Handles SIGTERM/SIGINT, waits for active requests, cleans up resources.
+- **Unit Tests:** 90+ tests covering validators, middleware, utilities, and constants.
+- **Centralized Constants:** All configuration values, error codes, and limits in one place.
+- **Standardized API Responses:** Consistent response format with error codes for debugging.
 - **Audit Logging:** Every agent action is tracked with execution time and status for full observability.
-- **Action Templates:** Pre-defined workflows (e.g., "Vacation Request") for consistent process execution.
 - **Robust Error Handling:** Exponential backoff retry logic for all AI API calls ensures stability under load.
-- **Security:** Row Level Security (RLS) and secure Google OAuth 2.0 authentication.
+- **Security:** Row Level Security (RLS), Helmet, CORS, Rate Limiting, and secure Google OAuth 2.0 authentication.
 
 ---
 
-## �️ Architecture
+## 🏗️ Architecture
 
 The system follows a modular **Agentic RAG Architecture**:
 
@@ -73,7 +83,7 @@ graph TD
         External <--> Google[📅 Google Workspace]
     end
     
-    Agent <--> Gemini[✨ Google Gemini 2.0]
+    Agent <--> Gemini[✨ Google Gemini 2.5]
 ```
 
 ---
@@ -84,7 +94,7 @@ graph TD
 - **Node.js** v18+
 - **Supabase** account (free tier)
 - **Google Cloud** project (for OAuth & Gemini)
-- **Hugging Face** token
+- **Hugging Face** token (free)
 
 ### Installation
 
@@ -107,27 +117,46 @@ graph TD
 ```
 On-boarding-Ai-chatbot/
 ├── backend/                        # Express.js API Server
-│   ├── config/                     # Database & App Config
+│   ├── config/                     # Database & Logger Config
+│   ├── constants/                  # Centralized Constants
+│   │   └── index.js               # Error codes, limits, model config
 │   ├── controllers/                # Request Handlers
 │   ├── database/                   # SQL Schemas & Migrations
-│   │   └── phase5-agentic-ai.sql   # Agent System Schema
+│   │   └── fixes/                 # Fix scripts for common issues
+│   ├── middleware/                 # Express Middleware
+│   │   ├── authMiddleware.js      # JWT verification
+│   │   └── validationMiddleware.js # Input validation
 │   ├── routes/                     # API Endpoints
-│   │   ├── agentRoutes.js          # Agent & Approval Routes
-│   │   └── googleAuthRoutes.js     # OAuth Integration
-│   ├── services/                   # Business Logic
-│   │   ├── agentService.js         # Core Agent Logic
-│   │   ├── tools/                  # Tool Definitions
-│   │   ├── geminiService.js        # LLM Integration
-│   │   └── knowledgeBaseService.js # RAG Implementation
-│   └── scripts/                    # Maintenance Scripts
+│   ├── services/                   # Business Logic Layer
+│   │   ├── agentService.js        # Core Agent Logic
+│   │   ├── conversationService.js # Conversation CRUD
+│   │   ├── geminiService.js       # LLM Integration
+│   │   └── tools/                 # Tool Definitions
+│   ├── tests/                      # Unit Tests (Jest)
+│   │   ├── constants/
+│   │   ├── middleware/
+│   │   ├── utils/
+│   │   └── validators/
+│   ├── utils/                      # Utility Functions
+│   │   ├── apiResponse.js         # Standardized responses
+│   │   ├── envValidator.js        # Environment validation
+│   │   ├── gracefulShutdown.js    # Shutdown handler
+│   │   └── healthCheck.js         # Health check utilities
+│   └── validators/                 # Joi Schemas
+│       └── chatValidators.js      # Request validation
 │
 ├── frontend/                       # React 19 Application
 │   ├── src/
-│   │   ├── components/             # Reusable UI Components
-│   │   │   └── ActionApprovalModal # Human-in-the-Loop UI
-│   │   ├── contexts/               # State Management (Auth)
-│   │   ├── styles/                 # CSS Design System
-│   │   └── App.js                  # Main Application
+│   │   ├── components/            # Reusable UI Components
+│   │   │   ├── chat/              # Chat components
+│   │   │   ├── sidebar/           # Sidebar components
+│   │   │   └── ErrorBoundary.jsx  # Error handling
+│   │   ├── contexts/              # State Management
+│   │   │   ├── AuthContext.js     # Authentication
+│   │   │   └── ThemeContext.js    # Dark/Light mode
+│   │   ├── hooks/                 # Custom Hooks
+│   │   ├── services/              # API Services
+│   │   └── styles/                # CSS Design System
 │   └── public/
 │
 ├── QUICKSTART.md                   # Fast Setup Guide
@@ -140,24 +169,64 @@ On-boarding-Ai-chatbot/
 ## 🛠️ Technology Stack
 
 ### **Frontend**
-- **Framework:** React 19
-- **Routing:** React Router DOM
-- **Styling:** CSS Modules with Design Tokens (Variables)
-- **Icons:** Lucide React
-- **Markdown:** React Markdown + Remark GFM
+| Technology | Purpose |
+|------------|---------|
+| React 19 | UI Framework |
+| React Router DOM | Client-side routing |
+| React Context | State management (Auth, Theme) |
+| React.lazy/Suspense | Code splitting |
+| Lucide React | Icons |
+| React Markdown | Message rendering |
 
 ### **Backend**
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js
-- **Security:** Helmet, CORS, Express Rate Limit
-- **Logging:** Winston, Morgan
+| Technology | Purpose |
+|------------|---------|
+| Node.js 18+ | Runtime |
+| Express.js | Web framework |
+| Joi | Input validation |
+| Jest | Unit testing |
+| Helmet | Security headers |
+| CORS | Cross-origin requests |
+| Express Rate Limit | Rate limiting |
+| Winston + Morgan | Logging |
 
 ### **AI & Data**
-- **LLM:** Google Gemini 2.0 Flash (`gemini-2.0-flash-exp`)
-- **Embeddings:** Hugging Face (`BAAI/bge-small-en-v1.5`)
-- **Database:** Supabase (PostgreSQL 15 + `pgvector`)
-- **Storage:** Supabase Storage (Avatars)
-- **Auth:** Supabase Auth + Google OAuth 2.0
+| Technology | Purpose |
+|------------|---------|
+| Google Gemini 2.5 Flash | LLM for chat & agent |
+| Hugging Face | Embeddings (BAAI/bge-small-en-v1.5) |
+| Supabase | PostgreSQL + pgvector |
+| Supabase Storage | Avatar uploads |
+| Supabase Auth | Authentication |
+| Google OAuth 2.0 | Calendar/Gmail access |
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+cd backend && npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Watch mode
+npm run test:watch
+```
+
+**Current Status:** 90 tests passing across 7 test suites.
+
+---
+
+## 🏥 Health Checks
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/health` | Quick status check |
+| `GET /api/health?detailed=true` | Full diagnostics (services, memory, uptime) |
+| `GET /api/health/live` | Kubernetes liveness probe |
+| `GET /api/health/ready` | Kubernetes readiness probe |
 
 ---
 
@@ -176,7 +245,7 @@ On-boarding-Ai-chatbot/
 
 ---
 
-## 🧪 Example Queries
+## 💡 Example Queries
 
 Try these to see the Agent in action:
 
@@ -194,5 +263,5 @@ This project is a thesis prototype designed for educational and demonstration pu
 ---
 
 <div align="center">
-  <sub>Built with ❤️ by [Your Name]</sub>
+  <sub>Built with ❤️ by Marwan Zenhom</sub>
 </div>
