@@ -17,20 +17,42 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active session
+    // Check for OAuth callback in URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const error = hashParams.get('error');
+    
+    if (error) {
+      console.error('❌ OAuth error:', error, hashParams.get('error_description'));
+      setLoading(false);
+      return;
+    }
+
+    // Check active session immediately
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Initial session check:', session ? `User: ${session.user?.email}` : 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (including OAuth callbacks)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state changed:', event);
+      console.log('👤 Session:', session ? `User: ${session.user?.email}` : 'null');
+      
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Handle OAuth callback - clear hash from URL after processing
+      if (event === 'SIGNED_IN' && window.location.hash) {
+        console.log('✅ OAuth sign-in successful, cleaning URL hash');
+        // Remove hash from URL for cleaner navigation
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     });
 
     return () => subscription.unsubscribe();

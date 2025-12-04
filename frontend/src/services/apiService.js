@@ -8,8 +8,24 @@ class ApiService {
   }
 
   async getAuthToken() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error getting session:', error);
+        return null;
+      }
+      
+      if (!session) {
+        console.warn('No active session found');
+        return null;
+      }
+      
+      return session.access_token || null;
+    } catch (error) {
+      console.error('Failed to get auth token:', error);
+      return null;
+    }
   }
 
   async request(endpoint, options = {}) {
@@ -41,9 +57,19 @@ class ApiService {
       if (!response.ok) {
         // Handle authentication errors
         if (response.status === 401) {
-          // Token expired or invalid - redirect to login
-          window.location.href = '/login';
-          throw new Error('Session expired. Please login again.');
+          // Check if we have a session - if not, it might just be timing
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (!session) {
+            // No session at all - redirect to login
+            console.warn('No session found, redirecting to login');
+            window.location.href = '/login';
+            throw new Error('Session expired. Please login again.');
+          } else {
+            // We have a session but token might be invalid - try refreshing
+            console.warn('Session exists but token invalid, might be timing issue');
+            throw new Error(data.error || 'Authentication failed. Please try again.');
+          }
         }
         
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
