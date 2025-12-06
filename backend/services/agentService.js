@@ -10,70 +10,11 @@ import { availableTools, requiresApproval, getActionDescription } from './tools/
 import { ToolExecutor } from './tools/toolExecutor.js';
 import { supabase, supabaseAdmin } from '../config/database.js';
 import logger from '../config/logger.js';
-import { AI_MODELS, AGENT_CONFIG, ERROR_CODES } from '../constants/index.js';
+import { AI_MODELS, AGENT_CONFIG } from '../constants/index.js';
 
 dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-/**
- * Custom error classes for better error handling
- */
-export class AgentError extends Error {
-  constructor(message, code, isRecoverable = false, details = {}) {
-    super(message);
-    this.name = 'AgentError';
-    this.code = code;
-    this.isRecoverable = isRecoverable;
-    this.details = details;
-    this.timestamp = new Date().toISOString();
-  }
-}
-
-export class ToolExecutionError extends AgentError {
-  constructor(toolName, originalError, details = {}) {
-    super(
-      `Tool '${toolName}' execution failed: ${originalError.message}`,
-      ERROR_CODES.AI_TOOL_EXECUTION_FAILED,
-      true, // Tool errors are often recoverable
-      { toolName, originalError: originalError.message, ...details }
-    );
-    this.name = 'ToolExecutionError';
-  }
-}
-
-export class MaxIterationsError extends AgentError {
-  constructor(iterations, userId) {
-    super(
-      `Agent reached maximum iterations (${iterations})`,
-      ERROR_CODES.AI_MAX_ITERATIONS,
-      false,
-      { iterations, userId }
-    );
-    this.name = 'MaxIterationsError';
-  }
-}
-
-export class AIServiceError extends AgentError {
-  constructor(originalError) {
-    const isRateLimit = originalError.message?.includes('429') || 
-                        originalError.message?.toLowerCase().includes('rate limit');
-    const isQuotaExceeded = originalError.message?.toLowerCase().includes('quota');
-    
-    let userMessage = 'AI service is temporarily unavailable. Please try again in a moment.';
-    let code = ERROR_CODES.AI_SERVICE_UNAVAILABLE;
-    
-    if (isRateLimit) {
-      userMessage = 'AI service is experiencing high demand. Please wait a moment and try again.';
-      code = ERROR_CODES.RATE_LIMIT_EXCEEDED;
-    } else if (isQuotaExceeded) {
-      userMessage = 'AI service quota has been exceeded. Please contact support.';
-    }
-    
-    super(userMessage, code, isRateLimit, { originalError: originalError.message });
-    this.name = 'AIServiceError';
-  }
-}
 
 export class AIAgent {
   constructor(userId, conversationId = null) {
@@ -212,28 +153,18 @@ export class AIAgent {
               });
 
             } catch (error) {
-              const toolError = new ToolExecutionError(call.name, error);
-              
               logger.error('Tool execution failed', { 
                 toolName: call.name, 
-                error: error.message,
-                errorCode: toolError.code,
-                isRecoverable: toolError.isRecoverable,
-                userId: this.userId
+                error: error.message 
               });
 
               // Log failed execution
               await this.logAction(call.name, call.args, null, 'failed', error.message);
 
-              // Provide user-friendly error message based on tool type
-              const userMessage = this.getToolErrorMessage(call.name, error);
-
               return {
                 success: false,
-                content: userMessage,
+                content: `❌ I encountered an error while trying to ${call.name}: ${error.message}`,
                 error: error.message,
-                errorCode: toolError.code,
-                isRecoverable: toolError.isRecoverable,
                 executedActions: this.executedActions
               };
             }
@@ -273,25 +204,11 @@ export class AIAgent {
 
       // Check if we hit max iterations
       if (iteration >= this.maxIterations) {
-        const maxIterError = new MaxIterationsError(iteration, this.userId);
-        
-        logger.warn('Agent hit max iterations', { 
-          userId: this.userId, 
-          iterations: iteration,
-          errorCode: maxIterError.code,
-          executedActionsCount: this.executedActions.length
-        });
-        
+        logger.warn('Agent hit max iterations', { userId: this.userId, iterations: iteration });
         return {
           success: false,
-          content: '⚠️ This request requires more steps than I can handle in one go. Here\'s what I suggest:\n\n' +
-                   '1. Try breaking your request into smaller, specific tasks\n' +
-                   '2. Ask me to do one thing at a time\n' +
-                   '3. If you were asking about multiple topics, please ask about each separately\n\n' +
-                   'I\'ve already completed ' + this.executedActions.length + ' action(s) for you.',
-          error: maxIterError.message,
-          errorCode: maxIterError.code,
-          isRecoverable: false,
+          content: 'I apologize, but this request is too complex for me to handle. Please try breaking it down into smaller steps.',
+          error: 'Max iterations reached',
           executedActions: this.executedActions
         };
       }
@@ -305,126 +222,18 @@ export class AIAgent {
       };
 
     } catch (error) {
-      // Classify the error
-      const classifiedError = this.classifyError(error);
-      
       logger.error('Agent processing error', { 
         userId: this.userId, 
         error: error.message,
-        errorCode: classifiedError.code,
-        isRecoverable: classifiedError.isRecoverable,
-        stack: error.stack,
-        executedActionsCount: this.executedActions.length
+        stack: error.stack 
       });
 
       return {
         success: false,
-        content: classifiedError.userMessage,
+        content: `I apologize, but I encountered an error: ${error.message}. Please try again or contact support if the issue persists.`,
         error: error.message,
-        errorCode: classifiedError.code,
-        isRecoverable: classifiedError.isRecoverable,
         executedActions: this.executedActions
       };
-    }
-  }
-
-  /**
-   * Classify an error and determine user-friendly messaging
-   */
-  classifyError(error) {
-    const errorMessage = error.message?.toLowerCase() || '';
-    
-    // AI Service errors (rate limits, quota, etc.)
-    if (errorMessage.includes('429') || 
-        errorMessage.includes('rate limit') ||
-        errorMessage.includes('quota') ||
-        errorMessage.includes('too many requests')) {
-      return {
-        code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
-        isRecoverable: true,
-        userMessage: '⏳ The AI service is experiencing high demand right now. Please wait a moment and try again.'
-      };
-    }
-    
-    // Network/connectivity errors
-    if (errorMessage.includes('network') ||
-        errorMessage.includes('fetch') ||
-        errorMessage.includes('timeout') ||
-        errorMessage.includes('econnrefused') ||
-        errorMessage.includes('socket')) {
-      return {
-        code: ERROR_CODES.AI_SERVICE_UNAVAILABLE,
-        isRecoverable: true,
-        userMessage: '🔌 I\'m having trouble connecting to the AI service. Please check your connection and try again.'
-      };
-    }
-    
-    // Authentication errors (Google OAuth)
-    if (errorMessage.includes('token') ||
-        errorMessage.includes('oauth') ||
-        errorMessage.includes('unauthorized') ||
-        errorMessage.includes('authentication')) {
-      return {
-        code: ERROR_CODES.AUTH_TOKEN_INVALID,
-        isRecoverable: true,
-        userMessage: '🔐 There was an authentication issue with one of your connected services. Please check your Google connection in Settings.'
-      };
-    }
-    
-    // Database errors
-    if (errorMessage.includes('database') ||
-        errorMessage.includes('supabase') ||
-        errorMessage.includes('postgres') ||
-        errorMessage.includes('sql')) {
-      return {
-        code: ERROR_CODES.DATABASE_ERROR,
-        isRecoverable: true,
-        userMessage: '💾 There was a temporary issue saving data. Please try again.'
-      };
-    }
-    
-    // Default: unknown error
-    return {
-      code: ERROR_CODES.AI_GENERATION_FAILED,
-      isRecoverable: false,
-      userMessage: `😔 I encountered an unexpected error: "${error.message}". If this continues, please try:\n\n` +
-                   '• Refreshing the page\n' +
-                   '• Starting a new conversation\n' +
-                   '• Contacting support if the issue persists'
-    };
-  }
-
-  /**
-   * Get user-friendly error message for specific tool failures
-   */
-  getToolErrorMessage(toolName, error) {
-    const errorMessage = error.message?.toLowerCase() || '';
-    
-    switch (toolName) {
-      case 'check_calendar':
-      case 'book_calendar_event':
-        if (errorMessage.includes('not connected') || errorMessage.includes('oauth')) {
-          return '📅 I couldn\'t access your Google Calendar. Please make sure your Google account is connected in Settings.';
-        }
-        return `❌ I had trouble with your calendar: ${error.message}. Please verify your Google Calendar connection.`;
-        
-      case 'send_email':
-        if (errorMessage.includes('not connected') || errorMessage.includes('oauth')) {
-          return '📧 I couldn\'t send the email because your Gmail isn\'t connected. Please connect your Google account in Settings.';
-        }
-        if (errorMessage.includes('invalid') && errorMessage.includes('email')) {
-          return '📧 The email address appears to be invalid. Please check the recipient address.';
-        }
-        return `❌ I couldn\'t send the email: ${error.message}. Please verify the email details and your Gmail connection.`;
-        
-      case 'search_knowledge_base':
-      case 'get_team_members':
-      case 'get_supervisor_info':
-      case 'get_vacation_policy':
-        return `📚 I had trouble searching our knowledge base: ${error.message}. Please try rephrasing your question.`;
-        
-      default:
-        return `❌ I encountered an error while trying to ${toolName.replace(/_/g, ' ')}: ${error.message}`;
     }
   }
 
@@ -502,39 +311,24 @@ export class AIAgent {
         });
 
       } catch (error) {
-        // Classify the error for better logging
-        const classifiedError = this.classifyError(error);
-        
         logger.error('Action execution failed', { 
           actionId, 
-          error: error.message,
-          errorCode: classifiedError.code,
-          isRecoverable: classifiedError.isRecoverable,
-          userId: this.userId
+          error: error.message 
         });
 
         // Update action with error
-        try {
-          await supabaseAdmin
-            .from('agent_actions')
-            .update({
-              status: 'failed',
-              error_message: error.message
-            })
-            .eq('id', actionId);
-        } catch (dbError) {
-          logger.error('Failed to update action status', { 
-            actionId, 
-            dbError: dbError.message 
-          });
-        }
+        await supabaseAdmin
+          .from('agent_actions')
+          .update({
+            status: 'failed',
+            error_message: error.message
+          })
+          .eq('id', actionId);
 
         results.push({ 
           actionId, 
           success: false, 
-          error: error.message,
-          errorCode: classifiedError.code,
-          isRecoverable: classifiedError.isRecoverable
+          error: error.message 
         });
       }
     }
@@ -625,7 +419,48 @@ export class AIAgent {
    * Get system instruction for the agent
    */
   getSystemInstruction() {
+    // Get current date/time information for the agent
+    const now = new Date();
+    const currentDate = now.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const currentTime = now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+    const currentYear = now.getFullYear();
+    const isoDate = now.toISOString().split('T')[0];
+    
+    // Calculate some reference dates
+    const tomorrow = new Date(now.getTime() + 86400000);
+    const nextWeek = new Date(now.getTime() + 7 * 86400000);
+    
     return `You are Nova, an intelligent AI assistant for NovaTech employees. You have the ability to:
+
+**CURRENT DATE & TIME AWARENESS:**
+- Today is: ${currentDate}
+- Current time: ${currentTime}  
+- ISO date: ${isoDate}
+- Year: ${currentYear}
+
+**IMPORTANT - Relative Date Handling:**
+When users mention relative dates, YOU MUST calculate the actual calendar dates:
+- "tomorrow" → ${tomorrow.toISOString().split('T')[0]}
+- "day after tomorrow" → add 2 days to today
+- "next week" → ${nextWeek.toISOString().split('T')[0]}
+- "in X days" → add X days to ${isoDate}
+- "for X days starting tomorrow" → from tomorrow for X consecutive days
+- "next Monday/Tuesday/etc" → find the next occurrence of that weekday
+- If user says a date without year (e.g., "December 15"), assume ${currentYear}. If that date has passed, use ${currentYear + 1}.
+
+**Example Calculations:**
+- User says "book vacation for tomorrow for 3 days"
+  → Start: ${tomorrow.toISOString().split('T')[0]}
+  → End: ${new Date(tomorrow.getTime() + 2 * 86400000).toISOString().split('T')[0]} (3 days = start day + 2 more)
 
 1. **Answer Questions**: Use the knowledge base to answer questions about company policies, employees, and procedures
 2. **Take Actions**: Execute tasks on behalf of users like sending emails, booking calendar events, checking schedules
@@ -639,6 +474,7 @@ export class AIAgent {
 - Be efficient: Use tools to get information instead of making assumptions
 - Be helpful: If you need more information, ask clarifying questions
 - Be professional: Maintain a friendly but professional tone
+- **Always confirm dates**: Before booking, say "Just to confirm, you want [calculated dates]?"
 
 **CRITICAL - Multi-Step Workflows:**
 For tasks with multiple dependent steps (like vacation booking), work **ONE STEP AT A TIME**:
@@ -660,22 +496,17 @@ For tasks with multiple dependent steps (like vacation booking), work **ONE STEP
 - get_vacation_policy: Get company vacation policies
 - search_knowledge_base: Search all company information
 
-**Example Workflow (Vacation Request):**
+**Example Workflow (Vacation Request with Relative Dates):**
 
 Turn 1:
-User: "I want to take vacation Nov 1-11. Can you check if it's available and book it?"
-You: [Call check_calendar for Nov 1-11]
-"I've checked your calendar for November 1-11. Those dates are completely free! Would you like me to book this vacation on your calendar?"
+User: "I want to take vacation starting tomorrow for 4 days"
+You: [Calculate: tomorrow = ${tomorrow.toISOString().split('T')[0]}, 4 days ending = ${new Date(tomorrow.getTime() + 3 * 86400000).toISOString().split('T')[0]}]
+[Call check_calendar for those dates]
+"I've checked your calendar for ${tomorrow.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} through ${new Date(tomorrow.getTime() + 3 * 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} (4 days). Those dates are free! Would you like me to book this vacation?"
 
 Turn 2:
 User: "Yes, book it"
-You: [Call book_calendar_event for Nov 1-11]
-"Perfect! I've booked your vacation from November 1-11 on your calendar. Would you like me to send an email to your supervisor to notify them?"
-
-Turn 3:
-User: "Yes, send the email"
-You: [Call send_email to supervisor]
-"Done! I've sent an email to your supervisor about your vacation request from November 1-11."
+You: [Call book_calendar_event with calculated dates]
 
 **Important Rules:**
 - NEVER call book_calendar_event without first calling check_calendar
