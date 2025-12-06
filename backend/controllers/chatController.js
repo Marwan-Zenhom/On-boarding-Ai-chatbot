@@ -9,10 +9,13 @@ import { AIAgent } from '../services/agentService.js';
 import * as conversationService from '../services/conversationService.js';
 import { 
   successResponse, 
+  errorResponse,
   internalError, 
   notFoundError,
-  forbiddenError 
+  forbiddenError,
+  validationError
 } from '../utils/apiResponse.js';
+import { HTTP_STATUS } from '../constants/index.js';
 import { ERROR_CODES, SUCCESS_MESSAGES } from '../constants/index.js';
 import logger from '../config/logger.js';
 
@@ -117,12 +120,18 @@ export const sendMessage = async (req, res) => {
       error: error.message, 
       userId, 
       conversationId,
-      code: error.code 
+      code: error.code,
+      statusCode: error.statusCode
     });
 
     // Handle service errors with proper status codes
     if (error.name === 'ServiceError') {
-      return internalError(res, error.message, { code: error.code });
+      return errorResponse(
+        res, 
+        error.message, 
+        error.code, 
+        error.statusCode || HTTP_STATUS.INTERNAL_ERROR
+      );
     }
 
     return internalError(res, 'Failed to process message');
@@ -172,14 +181,19 @@ export const regenerateResponse = async (req, res) => {
     logger.error('Regenerate error', { 
       error: error.message, 
       userId, 
-      conversationId 
+      conversationId,
+      code: error.code,
+      statusCode: error.statusCode
     });
 
+    // Handle service errors with proper status codes
     if (error.name === 'ServiceError') {
-      if (error.statusCode === 404) {
-        return notFoundError(res, error.message, error.code);
-      }
-      return internalError(res, error.message, { code: error.code });
+      return errorResponse(
+        res, 
+        error.message, 
+        error.code, 
+        error.statusCode || HTTP_STATUS.INTERNAL_ERROR
+      );
     }
 
     return internalError(res, 'Failed to regenerate response');
@@ -199,7 +213,22 @@ export const getConversations = async (req, res) => {
     return successResponse(res, { conversations });
 
   } catch (error) {
-    logger.error('Get conversations error', { error: error.message, userId });
+    logger.error('Get conversations error', { 
+      error: error.message, 
+      userId,
+      code: error.code,
+      statusCode: error.statusCode
+    });
+
+    if (error.name === 'ServiceError') {
+      return errorResponse(
+        res, 
+        error.message, 
+        error.code, 
+        error.statusCode || HTTP_STATUS.INTERNAL_ERROR
+      );
+    }
+
     return internalError(res, 'Failed to fetch conversations');
   }
 };
@@ -224,8 +253,20 @@ export const updateConversation = async (req, res) => {
     logger.error('Update conversation error', { 
       error: error.message, 
       userId, 
-      conversationId: id 
+      conversationId: id,
+      code: error.code,
+      statusCode: error.statusCode
     });
+
+    if (error.name === 'ServiceError') {
+      return errorResponse(
+        res, 
+        error.message, 
+        error.code, 
+        error.statusCode || HTTP_STATUS.INTERNAL_ERROR
+      );
+    }
+
     return internalError(res, 'Failed to update conversation');
   }
 };
@@ -249,8 +290,20 @@ export const deleteConversation = async (req, res) => {
     logger.error('Delete conversation error', { 
       error: error.message, 
       userId, 
-      conversationId: id 
+      conversationId: id,
+      code: error.code,
+      statusCode: error.statusCode
     });
+
+    if (error.name === 'ServiceError') {
+      return errorResponse(
+        res, 
+        error.message, 
+        error.code, 
+        error.statusCode || HTTP_STATUS.INTERNAL_ERROR
+      );
+    }
+
     return internalError(res, 'Failed to delete conversation');
   }
 };
