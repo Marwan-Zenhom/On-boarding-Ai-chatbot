@@ -21,10 +21,15 @@
 
 ### 🧠 Advanced Agentic AI ("Nova")
 - **Multi-Step Workflows:** Capable of executing complex tasks like *"Check my calendar for next week and book a meeting with John."*
+- **Date/Time Awareness:** The agent knows the current date and can understand relative dates:
+  - *"Book vacation for tomorrow"* → Automatically calculates the correct date
+  - *"Take 3 days off starting next Monday"* → Finds the next Monday and adds days
+  - *"Schedule meeting for December 15"* → Assumes current year if not specified
 - **Autonomous Tool Use:** Intelligently utilizes a suite of tools:
   - 📅 **Calendar:** Check availability and book events (Google Calendar integration)
   - 📧 **Email:** Draft and send emails to colleagues (Gmail integration)
   - 👥 **Directory:** Look up employee details and team structures
+- **Smart All-Day Events:** Vacation and leave requests are automatically created as all-day events with correct date handling.
 - **Human-in-the-Loop:** Built-in **Approval Workflow** ensures no critical action (like sending emails) happens without your explicit confirmation via a secure UI.
 
 ### 🔍 Intelligent Search & Context

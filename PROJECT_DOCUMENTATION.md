@@ -227,6 +227,8 @@ User Message → Frontend → API Service → Backend
 | Team Member Lookup | ✅ Complete | Find colleagues by dept/role |
 | Supervisor Info | ✅ Complete | Get supervisor contact details |
 | Action Approval | ✅ Complete | Human-in-the-loop for sensitive actions |
+| Date/Time Awareness | ✅ Complete | Agent knows current date, handles "tomorrow", "next week" |
+| All-Day Event Support | ✅ Complete | Vacation/leave auto-creates all-day calendar events |
 
 ### 4.3 Security Features
 
@@ -579,6 +581,32 @@ export const getMessagesForRegeneration = async (conversationId, messageId, user
 
 ### 6.4 AIAgent Service (`backend/services/agentService.js`)
 
+Key features:
+
+**Date/Time Awareness:**
+The agent is dynamically injected with current date/time information on each request:
+
+```javascript
+getSystemInstruction() {
+  const now = new Date();
+  const currentDate = now.toLocaleDateString('en-US', { 
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+  });
+  const tomorrow = new Date(now.getTime() + 86400000);
+  
+  return `...
+  **CURRENT DATE & TIME AWARENESS:**
+  - Today is: ${currentDate}
+  - ISO date: ${now.toISOString().split('T')[0]}
+  
+  When users mention relative dates, calculate actual dates:
+  - "tomorrow" → ${tomorrow.toISOString().split('T')[0]}
+  - "next week" → add 7 days
+  - "in X days" → add X days to today
+  ...`;
+}
+```
+
 Key methods:
 
 ```javascript
@@ -593,7 +621,7 @@ class AIAgent {
   // Main processing loop
   async processRequest(userMessage, conversationHistory) {
     // 1. Check if agent features enabled
-    // 2. Build chat context
+    // 2. Build chat context with current date/time
     // 3. Send to Gemini with tools
     // 4. Handle function calls or text response
     // 5. Execute tools or request approval
