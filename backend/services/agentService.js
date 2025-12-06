@@ -683,6 +683,15 @@ You: [Call send_email to supervisor]
 - After each action, STOP and wait for user response
 - Only proceed when user explicitly confirms (e.g., "yes", "go ahead", "book it")
 
+**CRITICAL - Date Handling:**
+- When users mention dates like "7-12-2025" or "7/12/2025", interpret based on context. In most regions, this means December 7, 2025 (DD-MM-YYYY format).
+- Always use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ) when calling tools.
+- For vacation "from December 7 to December 8", the dates should be:
+  - start_date: "2025-12-07T00:00:00Z" (December 7)
+  - end_date: "2025-12-08T00:00:00Z" (December 8 - the LAST day of vacation)
+- The end_date should be the LAST day the user wants off, NOT the day after.
+- Confirm dates with the user if ambiguous (e.g., "Just to confirm, you want December 7th to 8th?")
+
 Remember: You're having a **conversation** with the user, not executing a script! 🚀`;
   }
 

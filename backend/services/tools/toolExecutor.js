@@ -163,7 +163,7 @@ export class ToolExecutor {
   /**
    * Book a calendar event
    */
-  async bookCalendarEvent({ title, start_date, end_date, description = '', attendees = [], reminders = [] }) {
+  async bookCalendarEvent({ title, start_date, end_date, description = '', attendees = [], reminders = [], all_day = null }) {
     const oauth2Client = await this.getGoogleAuth();
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -179,21 +179,78 @@ export class ToolExecutor {
       ]
     };
 
-    const event = {
-      summary: title,
-      description: description,
-      start: {
-        dateTime: new Date(start_date).toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      },
-      end: {
-        dateTime: new Date(end_date).toISOString(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      },
-      attendees: attendees.map(email => ({ email })),
-      reminders: eventReminders,
-      colorId: '11' // Red color for vacation/important events
-    };
+    // Detect if this should be an all-day event
+    // All-day if: explicitly set, or title contains vacation/leave/holiday/PTO keywords
+    const titleLower = title.toLowerCase();
+    const isAllDay = all_day === true || 
+      all_day !== false && (
+        titleLower.includes('vacation') ||
+        titleLower.includes('leave') ||
+        titleLower.includes('holiday') ||
+        titleLower.includes('pto') ||
+        titleLower.includes('day off') ||
+        titleLower.includes('time off')
+      );
+
+    let event;
+    
+    if (isAllDay) {
+      // For all-day events, use 'date' format (YYYY-MM-DD)
+      // Google Calendar all-day events use EXCLUSIVE end dates
+      // So for Dec 7-8 vacation, end_date should be Dec 9
+      const startDateObj = new Date(start_date);
+      const endDateObj = new Date(end_date);
+      
+      // Format as YYYY-MM-DD
+      const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      // Add one day to end date because Google Calendar end date is exclusive
+      const exclusiveEndDate = new Date(endDateObj);
+      exclusiveEndDate.setDate(exclusiveEndDate.getDate() + 1);
+      
+      event = {
+        summary: title,
+        description: description,
+        start: {
+          date: formatDate(startDateObj),
+        },
+        end: {
+          date: formatDate(exclusiveEndDate), // Exclusive end date
+        },
+        attendees: attendees.map(email => ({ email })),
+        reminders: eventReminders,
+        colorId: '11' // Red color for vacation/important events
+      };
+      
+      logger.info('Creating all-day event', {
+        title,
+        startDate: formatDate(startDateObj),
+        endDate: formatDate(exclusiveEndDate),
+        note: 'End date is exclusive in Google Calendar'
+      });
+    } else {
+      // For timed events, use 'dateTime' format
+      event = {
+        summary: title,
+        description: description,
+        start: {
+          dateTime: new Date(start_date).toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        },
+        end: {
+          dateTime: new Date(end_date).toISOString(),
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        },
+        attendees: attendees.map(email => ({ email })),
+        reminders: eventReminders,
+        colorId: '11' // Red color for vacation/important events
+      };
+    }
 
     const response = await calendar.events.insert({
       calendarId: 'primary',
@@ -202,6 +259,10 @@ export class ToolExecutor {
     });
 
     const createdEvent = response.data;
+    
+    // For display, show the actual vacation dates (not the exclusive end)
+    const displayStartDate = new Date(start_date).toLocaleDateString();
+    const displayEndDate = new Date(end_date).toLocaleDateString();
 
     return {
       data: {
@@ -210,9 +271,10 @@ export class ToolExecutor {
         title: createdEvent.summary,
         start: createdEvent.start.dateTime || createdEvent.start.date,
         end: createdEvent.end.dateTime || createdEvent.end.date,
-        attendees: createdEvent.attendees?.map(a => a.email) || []
+        attendees: createdEvent.attendees?.map(a => a.email) || [],
+        isAllDay
       },
-      summary: `✅ Calendar event "${title}" booked successfully from ${new Date(start_date).toLocaleDateString()} to ${new Date(end_date).toLocaleDateString()}.`
+      summary: `✅ Calendar event "${title}" booked successfully from ${displayStartDate} to ${displayEndDate}.`
     };
   }
 

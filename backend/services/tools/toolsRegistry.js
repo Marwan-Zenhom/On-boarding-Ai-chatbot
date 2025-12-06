@@ -33,7 +33,7 @@ export const availableTools = [
   
   {
     name: 'book_calendar_event',
-    description: 'Create a new event on the user\'s Google Calendar. Use this for booking vacation, meetings, or reminders.',
+    description: 'Create a new event on the user\'s Google Calendar. Use this for booking vacation, meetings, or reminders. IMPORTANT: For date ranges like "December 7 to December 8", the end_date should be December 8 (the system will handle Google Calendar\'s exclusive end date automatically).',
     parameters: {
       type: 'object',
       properties: {
@@ -44,12 +44,12 @@ export const availableTools = [
         start_date: {
           type: 'string',
           format: 'date-time',
-          description: 'Start date and time in ISO 8601 format (e.g., "2024-12-20T00:00:00Z")'
+          description: 'Start date in ISO 8601 format (e.g., "2025-12-07T00:00:00Z"). For vacation/leave, use midnight of the first day.'
         },
         end_date: {
           type: 'string',
           format: 'date-time',
-          description: 'End date and time in ISO 8601 format (e.g., "2024-12-27T23:59:59Z")'
+          description: 'End date in ISO 8601 format (e.g., "2025-12-08T00:00:00Z"). This should be the LAST day of the event, NOT the day after. For a vacation from Dec 7-8, use Dec 8.'
         },
         description: {
           type: 'string',
@@ -77,6 +77,10 @@ export const availableTools = [
             }
           },
           description: 'Optional: Custom reminders for the event'
+        },
+        all_day: {
+          type: 'boolean',
+          description: 'Optional: Set to true for all-day events like vacation. Auto-detected for titles containing vacation/leave/holiday/PTO.'
         }
       },
       required: ['title', 'start_date', 'end_date']
