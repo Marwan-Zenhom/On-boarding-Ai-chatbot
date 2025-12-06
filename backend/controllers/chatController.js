@@ -89,11 +89,14 @@ export const sendMessage = async (req, res) => {
     const aiContent = agentResponse.content || 
       'I apologize, but I could not generate a response. Please try again.';
 
-    // Save messages
-    const timestamp = new Date().toISOString();
+    // Save messages with distinct timestamps to ensure proper ordering
+    // User message gets current timestamp, assistant message gets +1ms
+    const userTimestamp = new Date().toISOString();
+    const assistantTimestamp = new Date(Date.now() + 1).toISOString();
+    
     await conversationService.saveMessages(currentConversationId, [
-      { role: 'user', content: message.trim(), timestamp },
-      { role: 'assistant', content: aiContent, timestamp }
+      { role: 'user', content: message.trim(), timestamp: userTimestamp },
+      { role: 'assistant', content: aiContent, timestamp: assistantTimestamp }
     ]);
 
     logger.info('Chat message processed successfully', { 
@@ -106,12 +109,12 @@ export const sendMessage = async (req, res) => {
       userMessage: {
         role: 'user',
         content: message.trim(),
-        timestamp
+        timestamp: userTimestamp
       },
       aiResponse: {
         role: 'assistant',
         content: aiContent,
-        timestamp,
+        timestamp: assistantTimestamp,
         model: 'ai-agent'
       },
       executedActions: agentResponse.executedActions || []
