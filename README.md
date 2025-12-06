@@ -33,7 +33,10 @@
 - **Human-in-the-Loop:** Built-in **Approval Workflow** ensures no critical action (like sending emails) happens without your explicit confirmation via a secure UI.
 
 ### 🔍 Intelligent Search & Context
-- **Hybrid RAG Engine:** Combines **Semantic Search** (Hugging Face embeddings) with **Context-Aware Keyword Search** for maximum accuracy.
+- **Hybrid Knowledge Base:** Combines **SQL relational tables** for structured queries with **semantic vector search** for natural language questions.
+  - *"Who is my manager?"* → Fast SQL lookup
+  - *"How do I reset my password?"* → Semantic search
+- **Personalized Responses:** Agent knows the user's department, role, manager, and onboarding status for tailored answers.
 - **Smart Context:** Analyzes the last 20 messages to understand pronouns and implicit references (e.g., *"What is **his** email?"*).
 - **Smart Greeting System:** Bypasses expensive vector searches for natural, instant greetings.
 
@@ -133,9 +136,11 @@ On-boarding-Ai-chatbot/
 │   │   └── validationMiddleware.js # Input validation
 │   ├── routes/                     # API Endpoints
 │   ├── services/                   # Business Logic Layer
-│   │   ├── agentService.js        # Core Agent Logic
+│   │   ├── agentService.js        # Core Agent Logic (personalized)
 │   │   ├── conversationService.js # Conversation CRUD
 │   │   ├── geminiService.js       # LLM Integration
+│   │   ├── knowledgeBaseService.js # Vector embeddings search
+│   │   ├── knowledgeQueryService.js # SQL queries for structured data
 │   │   └── tools/                 # Tool Definitions
 │   ├── tests/                      # Unit Tests (Jest)
 │   │   ├── constants/

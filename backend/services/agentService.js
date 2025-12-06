@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import { availableTools, requiresApproval, getActionDescription } from './tools/toolsRegistry.js';
 import { ToolExecutor } from './tools/toolExecutor.js';
 import { supabase, supabaseAdmin } from '../config/database.js';
+import { searchKnowledgeBase } from './knowledgeBaseService.js';
+import * as kbQuery from './knowledgeQueryService.js';
 import logger from '../config/logger.js';
 import { AI_MODELS, AGENT_CONFIG } from '../constants/index.js';
 
@@ -23,6 +25,128 @@ export class AIAgent {
     this.toolExecutor = new ToolExecutor(userId);
     this.maxIterations = AGENT_CONFIG.MAX_ITERATIONS;
     this.executedActions = []; // Track what was executed
+    this.userProfile = null; // Cached user employee profile
+  }
+
+  /**
+   * Get the current user's employee profile from the knowledge base
+   * Uses HYBRID approach: SQL first (fast), embeddings as fallback
+   * Matches the user's auth email to employee records
+   * @returns {Object|null} Employee profile data or null if not found
+   */
+  async getUserEmployeeProfile() {
+    // Return cached profile if available
+    if (this.userProfile !== null) {
+      return this.userProfile;
+    }
+
+    try {
+      // Get user email from auth metadata via supabaseAdmin
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(this.userId);
+      
+      const userEmail = authData?.user?.email;
+      
+      if (!userEmail) {
+        logger.warn('Could not get user email for personalization', { userId: this.userId });
+        this.userProfile = null;
+        return null;
+      }
+
+      // =====================================================================
+      // TRY SQL FIRST (faster, more reliable for exact email match)
+      // =====================================================================
+      try {
+        const sqlResult = await kbQuery.getEmployeeByEmail(userEmail);
+        
+        if (sqlResult?.employee) {
+          const employee = sqlResult.employee;
+          const manager = sqlResult.manager;
+
+          // Build profile from SQL result
+          this.userProfile = {
+            Employee_ID: employee.id,
+            First_Name: employee.first_name,
+            Last_Name: employee.last_name,
+            Full_Name: employee.full_name,
+            Email: employee.email,
+            Department: employee.department,
+            Role: employee.role,
+            Manager_ID: employee.manager_id,
+            Hire_Date: employee.hire_date,
+            Work_Location: employee.work_location,
+            Access_Level: employee.access_level,
+            Preferred_Language: employee.preferred_language,
+            Onboarding_Status: employee.onboarding_status,
+            Required_Tools: employee.required_tools?.join(';') || '',
+            resolvedManager: manager ? {
+              name: manager.full_name,
+              email: manager.email,
+              department: manager.department,
+              role: manager.role,
+              employeeId: manager.id
+            } : await this.toolExecutor.resolveManagerById(employee.manager_id),
+            _source: 'sql'
+          };
+
+          logger.info('User employee profile loaded via SQL', { 
+            userId: this.userId, 
+            employeeId: this.userProfile.Employee_ID,
+            department: this.userProfile.Department
+          });
+          
+          return this.userProfile;
+        }
+      } catch (sqlError) {
+        logger.warn('SQL lookup failed for user profile, trying embeddings', { 
+          userId: this.userId, 
+          email: userEmail,
+          error: sqlError.message 
+        });
+      }
+
+      // =====================================================================
+      // FALLBACK TO EMBEDDINGS SEARCH
+      // =====================================================================
+      const results = await searchKnowledgeBase(userEmail, 10);
+      
+      const employeeRecord = results.find(result => 
+        result.category === 'employees' && 
+        result.metadata?.Email?.toLowerCase() === userEmail.toLowerCase()
+      );
+
+      if (employeeRecord?.metadata) {
+        // Resolve manager information
+        const managerId = employeeRecord.metadata.Manager_ID;
+        let managerInfo = { name: 'Not specified', email: null };
+        
+        if (managerId) {
+          managerInfo = await this.toolExecutor.resolveManagerById(managerId);
+        }
+
+        this.userProfile = {
+          ...employeeRecord.metadata,
+          resolvedManager: managerInfo,
+          _source: 'embeddings'
+        };
+        
+        logger.info('User employee profile loaded via embeddings', { 
+          userId: this.userId, 
+          employeeId: this.userProfile.Employee_ID,
+          department: this.userProfile.Department
+        });
+        
+        return this.userProfile;
+      }
+
+      logger.info('No employee record found for user', { userId: this.userId, email: userEmail });
+      this.userProfile = null;
+      return null;
+
+    } catch (error) {
+      logger.error('Failed to get user employee profile', { userId: this.userId, error: error.message });
+      this.userProfile = null;
+      return null;
+    }
   }
 
   /**
@@ -55,7 +179,7 @@ export class AIAgent {
       const model = genAI.getGenerativeModel({
         model: AI_MODELS.DEFAULT,
         tools: [{ functionDeclarations: availableTools }],
-        systemInstruction: this.getSystemInstruction()
+        systemInstruction: await this.getSystemInstruction()
       });
 
       const chat = model.startChat({
@@ -416,9 +540,9 @@ export class AIAgent {
   }
 
   /**
-   * Get system instruction for the agent
+   * Get system instruction for the agent (personalized with user context)
    */
-  getSystemInstruction() {
+  async getSystemInstruction() {
     // Get current date/time information for the agent
     const now = new Date();
     const currentDate = now.toLocaleDateString('en-US', { 
@@ -438,8 +562,50 @@ export class AIAgent {
     // Calculate some reference dates
     const tomorrow = new Date(now.getTime() + 86400000);
     const nextWeek = new Date(now.getTime() + 7 * 86400000);
+
+    // Get personalized user context
+    const userProfile = await this.getUserEmployeeProfile();
+    
+    let userContextSection = '';
+    if (userProfile) {
+      userContextSection = `
+**CURRENT USER CONTEXT:**
+You are speaking with a specific NovaTech employee. Use this information to personalize your responses:
+- Name: ${userProfile.Full_Name || `${userProfile.First_Name} ${userProfile.Last_Name}`}
+- Email: ${userProfile.Email}
+- Employee ID: ${userProfile.Employee_ID}
+- Department: ${userProfile.Department}
+- Role: ${userProfile.Role}
+- Access Level: ${userProfile.Access_Level || 'Standard'}
+- Work Location: ${userProfile.Work_Location || 'Office'}
+- Manager: ${userProfile.resolvedManager?.name || 'Not specified'}
+- Manager Email: ${userProfile.resolvedManager?.email || 'Not specified'}
+- Onboarding Status: ${userProfile.Onboarding_Status || 'Unknown'}
+- Required Tools: ${userProfile.Required_Tools || 'Not specified'}
+- Preferred Language: ${userProfile.Preferred_Language || 'English'}
+- Hire Date: ${userProfile.Hire_Date || 'Not specified'}
+
+**PERSONALIZATION RULES:**
+1. Address the user by their first name (${userProfile.First_Name}) when appropriate
+2. When they ask "who is my manager?" or "who is my supervisor?", respond with: "${userProfile.resolvedManager?.name}"${userProfile.resolvedManager?.email ? ` (${userProfile.resolvedManager.email})` : ''}
+3. Filter FAQ answers to prioritize those relevant to their department (${userProfile.Department}) and role (${userProfile.Role})
+4. Show onboarding tasks that match their role and department
+5. For vacation/leave requests, automatically use their manager's email (${userProfile.resolvedManager?.email || 'not available'}) for notifications
+6. Respect their access level (${userProfile.Access_Level || 'Standard'}) when providing sensitive information
+7. If their onboarding status is "Not Started" or "In Progress", proactively offer help with onboarding tasks
+8. Consider their work location (${userProfile.Work_Location}) when giving advice (e.g., VPN setup for remote workers)
+
+`;
+    } else {
+      userContextSection = `
+**USER CONTEXT:**
+Unable to identify the current user's employee profile. Proceed with general assistance and ask for clarification when personalized information is needed.
+
+`;
+    }
     
     return `You are Nova, an intelligent AI assistant for NovaTech employees. You have the ability to:
+${userContextSection}
 
 **CURRENT DATE & TIME AWARENESS:**
 - Today is: ${currentDate}

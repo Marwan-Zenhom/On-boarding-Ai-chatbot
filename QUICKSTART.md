@@ -88,6 +88,16 @@ In **Supabase SQL Editor**, run these scripts from `backend/database/` in order:
 4. `phase5-agentic-ai-schema.sql`
 5. `create-avatar-storage.sql`
 6. `setup-messages-rls.sql`
+7. `phase6-knowledge-base-tables.sql` *(Hybrid Knowledge Base)*
+
+### Load Knowledge Base Data
+
+```bash
+cd backend
+node scripts/loadKnowledgeBase.js
+```
+
+This loads employee, FAQ, and task data into both SQL tables and vector embeddings.
 
 ### Start the App
 

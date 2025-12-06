@@ -19,7 +19,7 @@ async function generateEmbedding(text) {
     const truncatedText = text.substring(0, 2000);
     
     const response = await fetch(
-      'https://api-inference.huggingface.co/models/BAAI/bge-small-en-v1.5',
+      'https://router.huggingface.co/hf-inference/models/BAAI/bge-small-en-v1.5',
       {
         method: 'POST',
         headers: {

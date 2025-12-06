@@ -1,9 +1,10 @@
 # NovaTech AI Onboarding Assistant - Project Documentation
 
-> **Version:** 1.0.0  
+> **Version:** 1.1.0  
 > **Last Updated:** December 6, 2025  
 > **Author:** Marwan Zenhom  
-> **Status:** Prototype (Local Development)
+> **Status:** Prototype (Local Development)  
+> **Recent Update:** Hybrid Knowledge Base with SQL + Vector Search
 
 ---
 
@@ -301,7 +302,12 @@ backend/
 │   │
 │   ├── geminiService.js      # Direct Gemini API calls
 │   │
-│   ├── knowledgeBaseService.js # RAG search
+│   ├── knowledgeBaseService.js # Vector embeddings & semantic search
+│   │
+│   ├── knowledgeQueryService.js # SQL queries for structured data
+│   │                            # - Employee lookups
+│   │                            # - Task/FAQ filtering by role
+│   │                            # - Manager relationships
 │   │
 │   └── tools/
 │       ├── toolExecutor.js   # Tool execution engine
@@ -978,6 +984,107 @@ CREATE POLICY "Users can delete own conversations"
   ON conversations FOR DELETE
   USING (auth.uid() = user_id);
 ```
+
+### 8.3 Hybrid Knowledge Base Tables (Phase 6)
+
+The knowledge base uses a **hybrid approach** combining SQL relational tables for structured queries with vector embeddings for semantic search.
+
+#### Relational Tables
+
+```sql
+-- Employees with manager relationships
+CREATE TABLE kb_employees (
+  id TEXT PRIMARY KEY,              -- E001, E002...
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  department TEXT NOT NULL,
+  role TEXT NOT NULL,
+  manager_id TEXT REFERENCES kb_employees(id),
+  hire_date DATE,
+  work_location TEXT,
+  access_level TEXT DEFAULT 'Standard',
+  onboarding_status TEXT DEFAULT 'Not Started',
+  required_tools TEXT[]
+);
+
+-- FAQs with department/role filtering
+CREATE TABLE kb_faqs (
+  id TEXT PRIMARY KEY,              -- F001, F002...
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  category TEXT NOT NULL,
+  difficulty_level TEXT,
+  context_tags TEXT[]
+);
+
+-- Junction tables for many-to-many relationships
+CREATE TABLE kb_faq_departments (faq_id TEXT, department TEXT);
+CREATE TABLE kb_faq_roles (faq_id TEXT, role TEXT);
+
+-- Onboarding tasks by role/department
+CREATE TABLE kb_onboarding_tasks (
+  id TEXT PRIMARY KEY,              -- T001, T002...
+  category TEXT NOT NULL,
+  task_name TEXT NOT NULL,
+  description TEXT,
+  department TEXT,
+  priority TEXT,
+  deadline TEXT                     -- "Day 1", "Week 1", etc.
+);
+
+CREATE TABLE kb_task_roles (task_id TEXT, role TEXT);
+```
+
+#### SQL Functions for Personalized Queries
+
+| Function | Description |
+|----------|-------------|
+| `get_employee_by_email(email)` | Get employee with manager details |
+| `get_employee_by_id(id)` | Get employee by ID with manager |
+| `get_tasks_for_employee(id)` | Get tasks filtered by role/department |
+| `get_faqs_for_employee(id)` | Get FAQs relevant to employee |
+| `get_team_by_department(dept)` | Get all team members in department |
+| `get_direct_reports(manager_id)` | Get manager's direct reports |
+| `search_employees_by_name(name)` | Fuzzy name search |
+
+#### Hybrid Query Flow
+
+```
+User Query
+    │
+    ▼
+┌─────────────────┐
+│  Query Router   │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐ ┌────────────┐
+│  SQL  │ │  Semantic  │
+│ Query │ │   Search   │
+└───┬───┘ └─────┬──────┘
+    │           │
+    ▼           ▼
+Fast lookup   Vector
+(exact)      similarity
+    │           │
+    └─────┬─────┘
+          ▼
+    Combined Result
+```
+
+**SQL is used for:**
+- "Who is my manager?"
+- "Show me the AI team"
+- "What are my onboarding tasks?"
+
+**Semantic search is used for:**
+- "How do I reset my password?"
+- "Tell me about vacation policy"
+- "What is the approval process for expenses?"
 
 ---
 
