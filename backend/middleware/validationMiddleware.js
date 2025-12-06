@@ -78,36 +78,17 @@ export const validateQuery = (schema) => {
 };
 
 /**
- * Sanitize string inputs (basic XSS prevention)
+ * Input sanitization middleware (intentionally a pass-through)
+ * 
+ * NOTE: This middleware deliberately does NOT sanitize inputs because:
+ * 1. User messages are sent to the AI and may contain legitimate special characters
+ * 2. AI responses are safely rendered using ReactMarkdown on the frontend
+ * 3. Database inputs are parameterized via Supabase client (prevents SQL injection)
+ * 
+ * If you need XSS sanitization for a different use case, implement it in
+ * the specific route handler or use a library like DOMPurify on the frontend.
  */
 export const sanitizeInputs = (req, res, next) => {
-  const sanitize = (obj) => {
-    if (typeof obj === 'string') {
-      // Basic HTML entity encoding
-      return obj
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;');
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(sanitize);
-    }
-    if (obj && typeof obj === 'object') {
-      const sanitized = {};
-      for (const key in obj) {
-        sanitized[key] = sanitize(obj[key]);
-      }
-      return sanitized;
-    }
-    return obj;
-  };
-
-  // Note: We skip sanitization for message content as it may contain
-  // legitimate characters that users want to send to the AI
-  // The AI response is already rendered safely using ReactMarkdown
-  
   next();
 };
 
