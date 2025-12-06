@@ -26,6 +26,9 @@ import logger from '../config/logger.js';
 export const sendMessage = async (req, res) => {
   const userId = req.user.id;
   const { message, conversationId, files } = req.body;
+  
+  // Track the actual conversation ID (may differ from request if new conversation created)
+  let currentConversationId = conversationId;
 
   try {
     // Get conversation history if exists
@@ -45,7 +48,6 @@ export const sendMessage = async (req, res) => {
     }
 
     // Create conversation if needed
-    let currentConversationId = conversationId;
     if (!currentConversationId) {
       const newConversation = await conversationService.createConversation(
         userId, 
@@ -119,7 +121,7 @@ export const sendMessage = async (req, res) => {
     logger.error('Chat error', { 
       error: error.message, 
       userId, 
-      conversationId,
+      conversationId: currentConversationId,
       code: error.code,
       statusCode: error.statusCode
     });
