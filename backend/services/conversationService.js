@@ -250,9 +250,27 @@ export const saveUserMessage = async (conversationId, content) => {
  * Get messages for regeneration
  * @param {string} conversationId - Conversation UUID
  * @param {string} messageId - Message UUID to regenerate from
+ * @param {string} userId - User UUID (required for ownership verification)
  * @returns {Promise<Object>} - User message and history
  */
-export const getMessagesForRegeneration = async (conversationId, messageId) => {
+export const getMessagesForRegeneration = async (conversationId, messageId, userId) => {
+  // First verify user owns this conversation
+  const { data: conversation, error: convError } = await supabaseAdmin
+    .from('conversations')
+    .select('id')
+    .eq('id', conversationId)
+    .eq('user_id', userId)
+    .single();
+
+  if (convError || !conversation) {
+    throw new ServiceError(
+      'Conversation not found or access denied',
+      ERROR_CODES.RESOURCE_ACCESS_DENIED,
+      403
+    );
+  }
+
+  // Now fetch messages (user ownership already verified)
   const { data: messages, error } = await supabaseAdmin
     .from('messages')
     .select('*')
@@ -261,7 +279,7 @@ export const getMessagesForRegeneration = async (conversationId, messageId) => {
 
   if (error || !messages || messages.length === 0) {
     throw new ServiceError(
-      'Conversation not found',
+      'Conversation has no messages',
       ERROR_CODES.RESOURCE_CONVERSATION_NOT_FOUND,
       404
     );

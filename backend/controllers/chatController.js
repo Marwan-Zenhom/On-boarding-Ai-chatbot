@@ -149,9 +149,9 @@ export const regenerateResponse = async (req, res) => {
   const { conversationId, messageId } = req.body;
 
   try {
-    // Get messages for regeneration
+    // Get messages for regeneration (verifies user owns the conversation)
     const { userMessage, conversationHistory, oldAssistantMessage } = 
-      await conversationService.getMessagesForRegeneration(conversationId, messageId);
+      await conversationService.getMessagesForRegeneration(conversationId, messageId, userId);
 
     // Generate new response
     const aiResponse = await generateResponse(userMessage.content, conversationHistory);
