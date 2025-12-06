@@ -9,3 +9,8 @@ build/
 coverage/
 npm-debug.log
 yarn-error.log
+
+# Logs
+*.log
+logs/
+backend/logs/

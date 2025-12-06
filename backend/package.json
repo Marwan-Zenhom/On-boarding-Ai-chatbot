@@ -1,59 +1,53 @@
 {
-  "name": "onboarding-chat-backend",
+  "name": "novatech-ai-backend",
   "version": "1.0.0",
-  "description": "Backend API for onboarding chat with Gemini AI integration",
+  "description": "Enterprise-grade Agentic AI backend with Gemini, RAG, and Google Workspace integration",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-<<<<<<< HEAD
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": ["onboarding", "chat", "gemini", "ai", "supabase"],
-=======
     "load-kb": "node scripts/loadKnowledgeBase.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+    "test:verbose": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose"
   },
   "keywords": [
-    "onboarding",
-    "chat",
-    "gemini",
     "ai",
-    "supabase"
+    "agentic",
+    "chatbot",
+    "gemini",
+    "rag",
+    "supabase",
+    "express",
+    "onboarding"
   ],
->>>>>>> feature/code-quality
   "author": "Marwan Zenhom",
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
-<<<<<<< HEAD
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0"
-=======
     "csv-parser": "^3.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.1.0",
     "googleapis": "^164.1.0",
     "helmet": "^7.1.0",
+    "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "winston": "^3.18.3"
->>>>>>> feature/code-quality
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/jest": "^30.0.0",
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^7.1.4"
   },
   "engines": {
     "node": ">=18.0.0"
   }
-<<<<<<< HEAD
-} 
-=======
 }
->>>>>>> feature/code-quality

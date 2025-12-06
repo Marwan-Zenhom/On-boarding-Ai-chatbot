@@ -1,7 +1,7 @@
 {
-    "name": "onboarding-chat-root",
+    "name": "novatech-ai-onboarding",
     "version": "1.0.0",
-    "description": "Root configuration for Onboarding AI Chatbot",
+    "description": "NovaTech AI Onboarding Assistant - Enterprise Agentic Chatbot",
     "private": true,
     "scripts": {
         "setup": "npm install && npm run setup:backend && npm run setup:frontend",
@@ -12,11 +12,26 @@
         "dev:frontend": "cd frontend && npm start",
         "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
         "start:backend": "cd backend && npm start",
-        "start:frontend": "cd frontend && npm run build && serve -s frontend/build"
+        "start:frontend": "cd frontend && npm run build && serve -s frontend/build",
+        "load-kb": "cd backend && npm run load-kb"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"
     },
     "author": "Marwan Zenhom",
-    "license": "MIT"
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourusername/On-boarding-Ai-chatbot.git"
+    },
+    "keywords": [
+        "ai",
+        "chatbot",
+        "onboarding",
+        "gemini",
+        "agentic",
+        "rag",
+        "supabase",
+        "react"
+    ]
 }

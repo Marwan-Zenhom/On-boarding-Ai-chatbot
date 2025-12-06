@@ -1,29 +1,61 @@
+/**
+ * Chat Routes
+ * All routes protected by authentication
+ * Input validation applied to POST/PUT endpoints
+ */
+
 import express from 'express';
-import { sendMessage, regenerateResponse, getConversations, updateConversation, deleteConversation } from '../controllers/chatController.js';
-<<<<<<< HEAD
-
-const router = express.Router();
-
-// Chat routes
-router.post('/message', sendMessage);
-router.post('/regenerate', regenerateResponse);
-router.get('/conversations', getConversations);
-router.put('/conversations/:id', updateConversation);
-=======
+import { 
+  sendMessage, 
+  regenerateResponse, 
+  getConversations, 
+  updateConversation, 
+  deleteConversation 
+} from '../controllers/chatController.js';
 import { authenticateUser } from '../middleware/authMiddleware.js';
-import { validateMessage, validateConversationUpdate } from '../middleware/validationMiddleware.js';
+import { validateBody, validateParams } from '../middleware/validationMiddleware.js';
+import { 
+  sendMessageSchema, 
+  regenerateSchema, 
+  updateConversationSchema,
+  conversationIdSchema 
+} from '../validators/chatValidators.js';
 
 const router = express.Router();
 
 // Apply authentication middleware to all chat routes
 router.use(authenticateUser);
 
-// Chat routes (all protected with validation)
-router.post('/message', validateMessage, sendMessage);
-router.post('/regenerate', regenerateResponse);
-router.get('/conversations', getConversations);
-router.put('/conversations/:id', validateConversationUpdate, updateConversation);
->>>>>>> feature/code-quality
-router.delete('/conversations/:id', deleteConversation);
+// Send a new message
+router.post(
+  '/message', 
+  validateBody(sendMessageSchema), 
+  sendMessage
+);
 
-export default router; 
+// Regenerate AI response
+router.post(
+  '/regenerate', 
+  validateBody(regenerateSchema), 
+  regenerateResponse
+);
+
+// Get all conversations
+router.get('/conversations', getConversations);
+
+// Update a conversation
+router.put(
+  '/conversations/:id', 
+  validateParams(conversationIdSchema),
+  validateBody(updateConversationSchema), 
+  updateConversation
+);
+
+// Delete a conversation
+router.delete(
+  '/conversations/:id', 
+  validateParams(conversationIdSchema),
+  deleteConversation
+);
+
+export default router;

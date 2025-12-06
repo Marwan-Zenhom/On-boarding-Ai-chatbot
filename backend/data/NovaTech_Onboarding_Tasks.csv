@@ -1,0 +1,29 @@
+Task_ID,Category,Task_Name,Description,Department,Owner,Priority,Deadline,Applicable_Roles,Status,Last_Updated,Difficulty_Level
+T001,HR & Admin,Submit Personal Documents,"Upload ID, contract, and required HR documents.",HR,HR Manager,High,Day 1,"All",Not Started,2025-12-05,Easy
+T002,HR & Admin,Sign Company Policies,"Review and sign confidentiality, IT usage, and compliance policies.",HR,HR Manager,High,Day 1,"All",Not Started,2025-12-05,Medium
+T003,HR & Admin,Orientation Session,"Attend official company introduction with HR.",HR,HR Manager,Medium,Week 1,"All",Not Started,2025-12-05,Easy
+
+T004,IT Setup,Receive Laptop & Equipment,"Pick up laptop, charger, monitor, and peripherals from IT.",IT,IT Support Lead,High,Day 1,"All",Not Started,2025-12-05,Easy
+T005,IT Setup,Account Creation,"Set up company email, Slack, VPN, and access to internal tools.",IT,IT Admin,High,Day 1,"All",Not Started,2025-12-05,Medium
+T006,IT Setup,Developer Environment Setup,"Install VSCode, Node.js, Docker, Git, and project dependencies.",IT,IT Admin,Medium,Day 2,"Software Engineer;Backend Developer;Frontend Developer;DevOps Engineer;ML Engineer;NLP Researcher;AI Assistant Researcher;AI Research Assistant;AI Product Designer",Not Started,2025-12-05,Medium
+T007,IT Setup,Access Internal Knowledge Base,"Get access to onboarding docs, Notion spaces, and technical wikis.",IT,IT Admin,Medium,Day 2,"All",Not Started,2025-12-05,Easy
+
+T008,Department Onboarding,Meet Your Manager,"Kickoff 1:1 meeting to discuss expectations and responsibilities.",Management,Direct Manager,High,Day 1,"All",Not Started,2025-12-05,Easy
+T009,Department Onboarding,Team Introduction,"Meet your team members and understand who does what.",Management,Direct Manager,Medium,Day 1,"All",Not Started,2025-12-05,Easy
+T010,Department Onboarding,Role Responsibilities Overview,"Detailed walkthrough of your main tasks, KPIs, and roadmap.",Management,Direct Manager,High,Week 1,"All",Not Started,2025-12-05,Medium
+
+T011,Training,Platform Training,"Training on NovaTech internal platforms and dashboards.",Training,Training Specialist,Medium,Week 1,"All",Not Started,2025-12-05,Medium
+T012,Training,Security Awareness Training,"Mandatory cybersecurity & phishing awareness training.",IT,Security Lead,High,Week 1,"All",Not Started,2025-12-05,Medium
+T013,Training,AI Tools Training,"Intro to internal AI tools, Gemini integration, and AI assistant usage.",AI,Head of AI,Medium,Week 2,"Head of AI;Prompt Engineer;NLP Researcher;ML Engineer;AI Assistant Researcher;AI Research Assistant;AI Product Designer;Data Analyst;Software Engineer",Not Started,2025-12-05,Hard
+
+T014,Project Setup,Join Sprint Board,"Add the new hire to Jira/sprint boards and assign first tickets.",Engineering,Engineering Lead,Medium,Week 1,"Software Engineer;Backend Developer;Frontend Developer;DevOps Engineer;ML Engineer;NLP Researcher;AI Assistant Researcher;AI Research Assistant",Not Started,2025-12-05,Medium
+T015,Project Setup,Clone Repositories,"Clone relevant GitHub repositories and verify local build.",Engineering,Senior Engineer,Medium,Week 1,"Software Engineer;Backend Developer;Frontend Developer;ML Engineer;NLP Researcher;AI Assistant Researcher;AI Research Assistant",Not Started,2025-12-05,Medium
+T016,Project Setup,RAG Pipeline Overview,"Overview of NovaTech RAG architecture, vector DB, and retrieval logic.",AI,Head of AI,Medium,Week 1,"Head of AI;Data Analyst;ML Engineer;NLP Researcher;AI Assistant Researcher;AI Research Assistant;AI Product Designer",Not Started,2025-12-05,Hard
+
+T017,Compliance,GDPR & Data Privacy,"Training on GDPR rules and internal data handling standards.",Compliance,Compliance Officer,High,Week 1,"All",Not Started,2025-12-05,Medium
+T018,Compliance,Security Tools Setup,"Configure 2FA, password manager, and security policies.",IT,Security Lead,High,Day 1,"All",Not Started,2025-12-05,Medium
+T019,Compliance,Sensitive Data Handling,"Guidelines for working with confidential customer and company data.",Compliance,Compliance Officer,Medium,Week 2,"All",Not Started,2025-12-05,Hard
+
+T020,Culture & Engagement,Welcome Lunch,"Informal team lunch to welcome the new hire.",HR,HR Team,Low,Week 1,"All (Office;Hybrid)",Not Started,2025-12-05,Easy
+T021,Culture & Engagement,Company Values Introduction,"Session on NovaTech mission, values, and culture principles.",HR,HR Manager,Medium,Week 1,"All",Not Started,2025-12-05,Easy
+T022,Culture & Engagement,Early Feedback Session,"Short feedback meeting to collect impressions after week 2.",HR,HR Manager,Medium,Week 2,"All",Not Started,2025-12-05,Easy
