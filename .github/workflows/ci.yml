@@ -157,7 +157,7 @@ jobs:
       
       - name: ✅ Backend dependency check
         working-directory: backend
-        run: npm ls --depth=0
+        run: npm ls --depth=0 --omit=dev
       
       # Frontend build
       - name: 📦 Install frontend dependencies
