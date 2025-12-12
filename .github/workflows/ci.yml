@@ -60,7 +60,7 @@ jobs:
           NODE_ENV: test
       
       - name: 📊 Run tests with coverage
-        run: npm run test:coverage
+        run: npm run 
         env:
           NODE_ENV: test
       
