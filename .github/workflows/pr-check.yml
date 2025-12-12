@@ -1,0 +1,149 @@
+# ============================================================================
+# Pull Request Check - NovaTech AI Onboarding Assistant
+# ============================================================================
+# This workflow runs on pull requests and provides:
+#   - Quick feedback on PR quality
+#   - Commit message validation
+#   - PR title check
+#   - File change summary
+# ============================================================================
+
+name: PR Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  # ==========================================================================
+  # PR Validation
+  # ==========================================================================
+  pr-validation:
+    name: 📋 PR Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📝 Check PR title format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $PR_TITLE"
+          
+          # Check if title follows conventional commits pattern
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?\!?:\ .+ ]]; then
+            echo "⚠️ Warning: PR title doesn't follow conventional commits format"
+            echo "Recommended format: type(scope): description"
+            echo "Examples:"
+            echo "  - feat(auth): add Google OAuth login"
+            echo "  - fix(chat): resolve message ordering bug"
+            echo "  - docs: update README with setup instructions"
+          else
+            echo "✅ PR title follows conventional commits format"
+          fi
+      
+      - name: 📊 Show changed files summary
+        run: |
+          echo "## 📊 Changed Files Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          
+          # Count by directory
+          echo "### By Directory" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" | grep -E "^backend/" | wc -l | xargs printf "Backend:  %d files\n" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" | grep -E "^frontend/" | wc -l | xargs printf "Frontend: %d files\n" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" | grep -E "^\.github/" | wc -l | xargs printf "CI/CD:    %d files\n" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" | grep -vE "^(backend|frontend|\.github)/" | wc -l | xargs printf "Root:     %d files\n" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          
+          # List files
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Files Changed" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Detect Secrets
+  # ==========================================================================
+  secrets-check:
+    name: 🔐 Secrets Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🔐 Check for potential secrets
+        run: |
+          # Patterns to check for potential secrets
+          PATTERNS=(
+            "SUPABASE_"
+            "GEMINI_API_KEY"
+            "GOOGLE_CLIENT_SECRET"
+            "HF_TOKEN"
+            "password\s*="
+            "secret\s*="
+            "api_key\s*="
+          )
+          
+          FOUND_ISSUES=false
+          
+          for pattern in "${PATTERNS[@]}"; do
+            # Check if pattern exists in changed files (excluding .example files)
+            MATCHES=$(git diff origin/${{ github.base_ref }}...HEAD -- '*.js' '*.jsx' '*.ts' '*.tsx' '*.json' | grep -iE "$pattern" | grep -v "\.example" | grep -v "process\.env\." || true)
+            
+            if [[ -n "$MATCHES" ]]; then
+              echo "⚠️ Potential secret pattern found: $pattern"
+              FOUND_ISSUES=true
+            fi
+          done
+          
+          if [[ "$FOUND_ISSUES" == "true" ]]; then
+            echo ""
+            echo "⚠️ Please ensure no secrets are hardcoded in the code!"
+            echo "Use environment variables (process.env.*) instead."
+          else
+            echo "✅ No obvious secret patterns detected"
+          fi
+
+  # ==========================================================================
+  # Check for .env files
+  # ==========================================================================
+  env-check:
+    name: 📁 Env Files Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📁 Check for .env files in PR
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          
+          # Check for .env files (excluding .example)
+          ENV_FILES=$(echo "$CHANGED_FILES" | grep -E "\.env$" | grep -v "\.example" || true)
+          
+          if [[ -n "$ENV_FILES" ]]; then
+            echo "❌ ERROR: .env files should not be committed!"
+            echo "Found:"
+            echo "$ENV_FILES"
+            echo ""
+            echo "Please remove these files from the commit and add them to .gitignore"
+            exit 1
+          else
+            echo "✅ No .env files in PR"
+          fi
+
