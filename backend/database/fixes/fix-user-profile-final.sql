@@ -157,3 +157,6 @@ WHERE tablename = 'user_profiles';
 -- The trigger should automatically create user profiles
 -- ============================================================================
 
+
+
+

@@ -80,3 +80,6 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_base_category ON knowledge_base(categor
 -- 5. Run setup-messages-rls.sql (sets up messages RLS)
 -- ============================================================================
 
+
+
+

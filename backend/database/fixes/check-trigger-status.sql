@@ -51,3 +51,6 @@ LEFT JOIN user_profiles p ON u.id = p.id
 ORDER BY u.created_at DESC
 LIMIT 10;
 
+
+
+

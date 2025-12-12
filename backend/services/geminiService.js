@@ -75,7 +75,7 @@ Your response:`;
       return {
         success: true,
         content: text.trim(),
-        model: 'gemini-2.0-flash-greeting'
+        model: 'gemini-2.5-flash-greeting'
       };
     }
     
@@ -194,7 +194,7 @@ Remember: You're not a formal assistant - you're a helpful friend showing them a
     return {
       success: true,
       content: text.trim(),
-      model: 'gemini-2.0-flash-kb',
+      model: 'gemini-2.5-flash-kb',
       sources: relevantDocs.length
     };
   } catch (error) {
@@ -230,7 +230,7 @@ export const generateStreamResponse = async (userMessage, conversationHistory = 
     return {
       success: true,
       stream: result.stream,
-      model: 'gemini-2.0-flash'
+      model: 'gemini-2.5-flash'
     };
   } catch (error) {
     console.error('Gemini Streaming Error:', error);

@@ -26,3 +26,6 @@ SELECT
 -- 3. If it still fails, the issue is elsewhere (Supabase Auth config)
 -- ============================================================================
 
+
+
+

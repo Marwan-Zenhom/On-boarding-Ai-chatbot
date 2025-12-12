@@ -96,3 +96,6 @@ WHERE routine_name = 'handle_new_user';
 -- Done! Try signing in with Google now.
 -- ============================================================================
 
+
+
+
