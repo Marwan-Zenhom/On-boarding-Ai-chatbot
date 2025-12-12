@@ -1,0 +1,32 @@
+# ============================================================================
+# CODEOWNERS - NovaTech AI Onboarding Assistant
+# ============================================================================
+# These owners will be requested for review when someone opens a pull request
+# that modifies code that they own.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ============================================================================
+
+# Default owner for everything
+* @Marwan-Zenhom
+
+# Backend
+/backend/ @Marwan-Zenhom
+
+# Frontend
+/frontend/ @Marwan-Zenhom
+
+# Database schemas (critical)
+/backend/database/ @Marwan-Zenhom
+
+# CI/CD workflows
+/.github/ @Marwan-Zenhom
+
+# Documentation
+*.md @Marwan-Zenhom
+/docs/ @Marwan-Zenhom
+
+# Configuration files
+*.json @Marwan-Zenhom
+*.yml @Marwan-Zenhom
+*.yaml @Marwan-Zenhom
+

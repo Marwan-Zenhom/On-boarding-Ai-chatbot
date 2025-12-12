@@ -128,8 +128,8 @@ describe('AIAgent Service', () => {
   });
 
   describe('getSystemInstruction', () => {
-    it('returns a comprehensive system instruction', () => {
-      const instruction = agent.getSystemInstruction();
+    it('returns a comprehensive system instruction', async () => {
+      const instruction = await agent.getSystemInstruction();
 
       expect(typeof instruction).toBe('string');
       expect(instruction.length).toBeGreaterThan(100);
@@ -140,8 +140,8 @@ describe('AIAgent Service', () => {
       expect(instruction).toContain('send_email');
     });
 
-    it('includes guidelines for multi-step workflows', () => {
-      const instruction = agent.getSystemInstruction();
+    it('includes guidelines for multi-step workflows', async () => {
+      const instruction = await agent.getSystemInstruction();
 
       expect(instruction).toContain('Multi-Step');
       expect(instruction).toContain('ONE STEP AT A TIME');
