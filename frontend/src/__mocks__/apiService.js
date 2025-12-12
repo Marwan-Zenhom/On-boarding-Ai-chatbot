@@ -50,7 +50,7 @@ const mockApiService = {
     aiResponse: {
       content: 'This is a regenerated mock response',
       timestamp: new Date().toISOString(),
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
     },
   }),
 
@@ -61,4 +61,7 @@ const mockApiService = {
 };
 
 export default mockApiService;
+
+
+
 

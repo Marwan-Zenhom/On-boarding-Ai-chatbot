@@ -5,9 +5,9 @@
 
 // AI Model Configuration
 export const AI_MODELS = {
-  GEMINI_FLASH: 'gemini-2.0-flash',
+  GEMINI_FLASH: 'gemini-2.5-flash',
   GEMINI_PRO: 'gemini-pro',
-  DEFAULT: 'gemini-2.0-flash'
+  DEFAULT: 'gemini-2.5-flash'
 };
 
 // Rate Limiting

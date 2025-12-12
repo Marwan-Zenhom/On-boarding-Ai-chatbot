@@ -525,3 +525,6 @@ const ProfileSettingsModal = ({ user, isDarkMode, onClose, onUpdate, authFunctio
 
 export default ProfileSettingsModal;
 
+
+
+
