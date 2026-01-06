@@ -201,6 +201,30 @@ export const availableTools = [
       },
       required: ['query']
     }
+  },
+  
+  {
+    name: 'get_onboarding_tasks',
+    description: 'Get onboarding tasks with structured filtering. Use this for specific questions about tasks by priority, deadline, or role. This is more accurate than search_knowledge_base for task queries.',
+    parameters: {
+      type: 'object',
+      properties: {
+        priority: {
+          type: 'string',
+          enum: ['High', 'Medium', 'Low'],
+          description: 'Optional: Filter by priority level'
+        },
+        deadline: {
+          type: 'string',
+          enum: ['Day 1', 'Day 2', 'Week 1', 'Week 2'],
+          description: 'Optional: Filter by deadline'
+        },
+        role: {
+          type: 'string',
+          description: 'Optional: Filter by role (e.g., "AI Research Assistant", "Software Engineer", "Head of AI"). Use this when asking about tasks for a specific job role.'
+        }
+      }
+    }
   }
 ];
 
@@ -273,6 +297,13 @@ export function getActionDescription(toolName, parameters) {
     
     case 'search_knowledge_base':
       return `Search knowledge base for: "${parameters.query}"`;
+    
+    case 'get_onboarding_tasks':
+      const taskFilters = [];
+      if (parameters.priority) taskFilters.push(`priority: ${parameters.priority}`);
+      if (parameters.deadline) taskFilters.push(`deadline: ${parameters.deadline}`);
+      if (parameters.role) taskFilters.push(`role: ${parameters.role}`);
+      return `Get onboarding tasks${taskFilters.length > 0 ? ` (${taskFilters.join(', ')})` : ''}`;
     
     default:
       return `Execute ${toolName}`;

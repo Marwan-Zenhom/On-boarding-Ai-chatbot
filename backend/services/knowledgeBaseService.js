@@ -140,7 +140,8 @@ export async function searchKnowledgeBase(query, limit = 5) {
     const queryEmbedding = await generateEmbedding(query);
     
     // Search using the match_knowledge function - pass array directly
-    const { data, error } = await supabase.rpc('match_knowledge', {
+    // Use supabaseAdmin to bypass RLS (knowledge base is internal app data)
+    const { data, error } = await supabaseAdmin.rpc('match_knowledge', {
       query_embedding: queryEmbedding,
       match_threshold: 0.5,  // Lowered from 0.7 for better recall
       match_count: limit

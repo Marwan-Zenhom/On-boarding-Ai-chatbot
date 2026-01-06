@@ -310,6 +310,123 @@ export async function getTasksByDeadline(deadline) {
 }
 
 /**
+ * Get onboarding tasks by priority and deadline
+ * @param {string} priority - Priority level (High, Medium, Low)
+ * @param {string} deadline - Deadline string (Day 1, Day 2, Week 1, Week 2)
+ * @returns {Array} Tasks matching both criteria
+ */
+export async function getTasksByPriorityAndDeadline(priority, deadline) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('kb_onboarding_tasks')
+      .select('*')
+      .eq('priority', priority)
+      .eq('deadline', deadline)
+      .order('id');
+
+    if (error) {
+      logger.error('Error in getTasksByPriorityAndDeadline', { priority, deadline, error: error.message });
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    logger.error('Exception in getTasksByPriorityAndDeadline', { priority, deadline, error: error.message });
+    return [];
+  }
+}
+
+/**
+ * Get onboarding tasks by role and deadline
+ * @param {string} role - Role name (e.g., "AI Research Assistant", "Software Engineer")
+ * @param {string} deadline - Deadline string (Day 1, Day 2, Week 1, Week 2)
+ * @returns {Array} Tasks applicable to the role with the given deadline
+ */
+export async function getTasksByRoleAndDeadline(role, deadline) {
+  try {
+    // First get task IDs that apply to this role
+    const { data: taskRoles, error: roleError } = await supabaseAdmin
+      .from('kb_task_roles')
+      .select('task_id')
+      .or(`role.eq.${role},role.eq.All`);
+
+    if (roleError) {
+      logger.error('Error getting task roles', { role, error: roleError.message });
+      return [];
+    }
+
+    if (!taskRoles || taskRoles.length === 0) {
+      return [];
+    }
+
+    const taskIds = taskRoles.map(tr => tr.task_id);
+
+    // Now get the tasks with the deadline
+    const { data, error } = await supabaseAdmin
+      .from('kb_onboarding_tasks')
+      .select('*')
+      .in('id', taskIds)
+      .eq('deadline', deadline)
+      .order('priority', { ascending: false })
+      .order('id');
+
+    if (error) {
+      logger.error('Error in getTasksByRoleAndDeadline', { role, deadline, error: error.message });
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    logger.error('Exception in getTasksByRoleAndDeadline', { role, deadline, error: error.message });
+    return [];
+  }
+}
+
+/**
+ * Get all onboarding tasks for a specific role (all deadlines)
+ * @param {string} role - Role name
+ * @returns {Array} All tasks applicable to the role
+ */
+export async function getTasksByRole(role) {
+  try {
+    // Get task IDs that apply to this role (including "All")
+    const { data: taskRoles, error: roleError } = await supabaseAdmin
+      .from('kb_task_roles')
+      .select('task_id')
+      .or(`role.eq.${role},role.eq.All`);
+
+    if (roleError) {
+      logger.error('Error getting task roles', { role, error: roleError.message });
+      return [];
+    }
+
+    if (!taskRoles || taskRoles.length === 0) {
+      return [];
+    }
+
+    const taskIds = taskRoles.map(tr => tr.task_id);
+
+    // Get the tasks
+    const { data, error } = await supabaseAdmin
+      .from('kb_onboarding_tasks')
+      .select('*')
+      .in('id', taskIds)
+      .order('deadline')
+      .order('priority', { ascending: false });
+
+    if (error) {
+      logger.error('Error in getTasksByRole', { role, error: error.message });
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    logger.error('Exception in getTasksByRole', { role, error: error.message });
+    return [];
+  }
+}
+
+/**
  * Get task by ID
  * @param {string} taskId - Task ID
  * @returns {Object|null} Task or null
@@ -410,12 +527,22 @@ export default {
   getTasksForEmployee,
   getTasksByCategory,
   getTasksByDeadline,
+  getTasksByPriorityAndDeadline,
+  getTasksByRoleAndDeadline,
+  getTasksByRole,
   getTaskById,
   
   // Utility
   getCompleteEmployeeProfile,
   hasRelationalData
 };
+
+
+
+
+
+
+
 
 
 

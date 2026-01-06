@@ -1,4 +1,4 @@
-import { supabase } from '../config/database.js';
+import { supabaseAdmin } from '../config/database.js';
 
 /**
  * Fast keyword-based search with context awareness
@@ -73,7 +73,8 @@ export async function searchKnowledgeBaseKeyword(query, limit = 5, conversationC
     console.log(`📝 Keywords: ${keywords.join(', ')}`);
     
     // Build search pattern for PostgreSQL ILIKE
-    let queryBuilder = supabase
+    // Use supabaseAdmin to bypass RLS (knowledge base is internal app data)
+    let queryBuilder = supabaseAdmin
       .from('knowledge_base')
       .select('id, category, content, metadata');
     

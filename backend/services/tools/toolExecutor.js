@@ -128,6 +128,10 @@ export class ToolExecutor {
           result = await this.searchKnowledgeBase(parameters);
           break;
         
+        case 'get_onboarding_tasks':
+          result = await this.getOnboardingTasks(parameters);
+          break;
+        
         default:
           throw new Error(`Unknown tool: ${toolName}`);
       }
@@ -640,6 +644,87 @@ export class ToolExecutor {
       },
       summary: `Found ${filteredResults.length} result(s) for "${query}"${category !== 'all' ? ` in ${category}` : ''}.`
     };
+  }
+
+  /**
+   * Get onboarding tasks with structured filtering
+   * Supports filtering by priority, deadline, and/or role
+   */
+  async getOnboardingTasks({ priority, deadline, role }) {
+    let tasks = [];
+    let filterDescription = [];
+
+    try {
+      // Determine which query to use based on filters provided
+      if (priority && deadline) {
+        // Both priority and deadline specified
+        tasks = await kbQuery.getTasksByPriorityAndDeadline(priority, deadline);
+        filterDescription.push(`priority: ${priority}`, `deadline: ${deadline}`);
+      } else if (role && deadline) {
+        // Role and deadline specified
+        tasks = await kbQuery.getTasksByRoleAndDeadline(role, deadline);
+        filterDescription.push(`role: ${role}`, `deadline: ${deadline}`);
+      } else if (role) {
+        // Only role specified
+        tasks = await kbQuery.getTasksByRole(role);
+        filterDescription.push(`role: ${role}`);
+      } else if (deadline) {
+        // Only deadline specified
+        tasks = await kbQuery.getTasksByDeadline(deadline);
+        filterDescription.push(`deadline: ${deadline}`);
+        // If priority is also specified, filter in memory
+        if (priority) {
+          tasks = tasks.filter(t => t.priority === priority);
+          filterDescription.push(`priority: ${priority}`);
+        }
+      } else if (priority) {
+        // Only priority specified - need to query all and filter
+        const allTasks = await kbQuery.getTasksByDeadline('Day 1');
+        const week1Tasks = await kbQuery.getTasksByDeadline('Week 1');
+        const day2Tasks = await kbQuery.getTasksByDeadline('Day 2');
+        const week2Tasks = await kbQuery.getTasksByDeadline('Week 2');
+        tasks = [...allTasks, ...day2Tasks, ...week1Tasks, ...week2Tasks]
+          .filter(t => t.priority === priority);
+        filterDescription.push(`priority: ${priority}`);
+      } else {
+        // No filters - return all tasks (not recommended, but handle it)
+        const allTasks = await kbQuery.getTasksByDeadline('Day 1');
+        const week1Tasks = await kbQuery.getTasksByDeadline('Week 1');
+        tasks = [...allTasks, ...week1Tasks];
+        filterDescription.push('all tasks');
+      }
+
+      // Format tasks for display
+      const formattedTasks = tasks.map(task => ({
+        id: task.id,
+        name: task.task_name,
+        description: task.description,
+        category: task.category,
+        priority: task.priority,
+        deadline: task.deadline,
+        department: task.department,
+        owner: task.owner,
+        difficulty: task.difficulty_level
+      }));
+
+      const filterStr = filterDescription.length > 0 ? ` (${filterDescription.join(', ')})` : '';
+
+      return {
+        data: {
+          count: formattedTasks.length,
+          tasks: formattedTasks,
+          filters: { priority, deadline, role }
+        },
+        summary: `Found ${formattedTasks.length} onboarding task(s)${filterStr}.`
+      };
+
+    } catch (error) {
+      logger.error('Error in getOnboardingTasks', { priority, deadline, role, error: error.message });
+      return {
+        data: { count: 0, tasks: [], filters: { priority, deadline, role } },
+        summary: `Error retrieving tasks: ${error.message}`
+      };
+    }
   }
 
   /**
