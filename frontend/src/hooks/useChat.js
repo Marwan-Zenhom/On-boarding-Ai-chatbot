@@ -31,7 +31,7 @@ export const useChat = (showToast) => {
   const inputRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  // Typing effect function
+  // Typing effect function with auto-scroll
   const typeMessage = useCallback((messageId, content) => {
     setTypingMessageId(messageId);
     setDisplayedContent(prev => ({ ...prev, [messageId]: '' }));
@@ -39,6 +39,7 @@ export const useChat = (showToast) => {
     let currentIndex = 0;
     const typingSpeed = 8;
     const timeoutIds = [];
+    let lastScrollIndex = 0;
     
     const typeChar = () => {
       if (currentIndex < content.length) {
@@ -46,6 +47,14 @@ export const useChat = (showToast) => {
           ...prev,
           [messageId]: content.slice(0, currentIndex + 1)
         }));
+        
+        // Auto-scroll every 50 characters or on newlines
+        const currentChar = content[currentIndex];
+        if (currentIndex - lastScrollIndex >= 50 || currentChar === '\n') {
+          chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+          lastScrollIndex = currentIndex;
+        }
+        
         currentIndex++;
         const timeoutId = setTimeout(typeChar, typingSpeed);
         timeoutIds.push(timeoutId);
@@ -55,6 +64,8 @@ export const useChat = (showToast) => {
         setDisplayedContent(prev => ({ ...prev, [messageId]: content }));
         setTypingTimeoutIds(prev => prev.filter(id => !timeoutIds.includes(id)));
         setIsGenerating(false);
+        // Final scroll to bottom
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
       }
     };
     
@@ -200,11 +211,12 @@ export const useChat = (showToast) => {
     }
   }, [input, isLoading, isGenerating, uploadedFiles, currentConversationId, typeMessage, showToast, typingTimeoutIds]);
 
-  // Regenerate response
+  // Regenerate response - resends the user message to get a new AI response
   const regenerateResponse = useCallback(async (messageId) => {
     const messageIndex = messages.findIndex(msg => msg.id === messageId);
     if (messageIndex === -1 || messages[messageIndex].role !== 'assistant') return;
     
+    // Find the user message before this assistant message
     let userMessageIndex = messageIndex - 1;
     while (userMessageIndex >= 0 && messages[userMessageIndex].role !== 'user') {
       userMessageIndex--;
@@ -213,9 +225,11 @@ export const useChat = (showToast) => {
     if (userMessageIndex === -1) return;
     
     const userMessage = messages[userMessageIndex];
+    // Keep messages up to and including the user message
     const messagesUpToUser = messages.slice(0, messageIndex);
     setMessages(messagesUpToUser);
     
+    // Clear displayed content for the old message
     setDisplayedContent(prev => {
       const newContent = { ...prev };
       delete newContent[messageId];
@@ -227,25 +241,27 @@ export const useChat = (showToast) => {
     showToast('Regenerating response...');
 
     try {
-      const response = await apiService.regenerateResponse(currentConversationId, userMessage.id);
+      // Resend the user message to get a new response
+      const response = await apiService.sendMessage(userMessage.content, currentConversationId, userMessage.files);
       
       if (response.success) {
+        const content = response.content || (response.aiResponse && response.aiResponse.content);
+        const timestamp = response.timestamp || (response.aiResponse && response.aiResponse.timestamp) || new Date().toISOString();
+        
         const newBotResponseId = Date.now().toString();
         const botMessage = {
           id: newBotResponseId,
           role: 'assistant',
-          content: response.aiResponse.content,
-          timestamp: response.aiResponse.timestamp,
+          content: content,
+          timestamp: timestamp,
           reaction: null,
-          isEdited: false,
-          model: response.aiResponse.model
+          isEdited: false
         };
         
-        const finalMessages = [...messagesUpToUser, botMessage];
-        setMessages(finalMessages);
+        setMessages(prev => [...prev, botMessage]);
         
         setTimeout(() => {
-          typeMessage(newBotResponseId, response.aiResponse.content);
+          typeMessage(newBotResponseId, content);
         }, 100);
         
         showToast('Response regenerated successfully!');
@@ -384,16 +400,70 @@ export const useChat = (showToast) => {
     }
   }, [messages]);
 
-  const saveMessageEdit = useCallback(() => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === editingMessageId 
-        ? { ...msg, content: editingText, isEdited: true }
-        : msg
-    ));
+  const saveMessageEdit = useCallback(async () => {
+    if (!editingText.trim() || isLoading || isGenerating) return;
+    
+    const messageIndex = messages.findIndex(msg => msg.id === editingMessageId);
+    if (messageIndex === -1) return;
+    
+    const editedMessage = messages[messageIndex];
+    
+    // Update the user message with edited content
+    const updatedUserMessage = { 
+      ...editedMessage, 
+      content: editingText.trim(), 
+      isEdited: true 
+    };
+    
+    // Remove all messages after the edited message (including any assistant response)
+    const messagesBeforeEdit = messages.slice(0, messageIndex);
+    setMessages([...messagesBeforeEdit, updatedUserMessage]);
+    
     setEditingMessageId(null);
     setEditingText('');
-    showToast('Message updated!');
-  }, [editingMessageId, editingText, showToast]);
+    setIsLoading(true);
+    setIsGenerating(true);
+    showToast('Resending edited message...');
+
+    try {
+      // Send the edited message to get a new response
+      const response = await apiService.sendMessage(editingText.trim(), currentConversationId, editedMessage.files);
+      
+      if (response.success) {
+        const content = response.content || (response.aiResponse && response.aiResponse.content);
+        const timestamp = response.timestamp || (response.aiResponse && response.aiResponse.timestamp) || new Date().toISOString();
+        
+        const newBotResponseId = Date.now().toString();
+        const botMessage = {
+          id: newBotResponseId,
+          role: 'assistant',
+          content: content,
+          timestamp: timestamp,
+          reaction: null,
+          isEdited: false
+        };
+        
+        setMessages(prev => [...prev, botMessage]);
+        
+        setTimeout(() => {
+          typeMessage(newBotResponseId, content);
+        }, 100);
+        
+        showToast('Response generated for edited message!');
+      } else {
+        throw new Error(response.error || 'Failed to get response');
+      }
+
+    } catch (error) {
+      console.error("Failed to get response for edited message:", error);
+      showToast('Failed to get response. Please try again.', 'error');
+    } finally {
+      setIsLoading(false);
+      setIsGenerating(false);
+      setGenerationTimeoutId(null);
+      setTypingMessageId(null);
+    }
+  }, [editingMessageId, editingText, messages, currentConversationId, isLoading, isGenerating, typeMessage, showToast]);
 
   const cancelMessageEdit = useCallback(() => {
     setEditingMessageId(null);

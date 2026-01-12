@@ -1,6 +1,6 @@
 /* Message styling - OpenAI like */
 .message {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   display: flex;
   width: 100%;
 }
@@ -11,6 +11,7 @@
 
 .message.assistant {
   justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .message-avatar {
@@ -22,6 +23,10 @@
   margin-right: 0;
   margin-left: 12px;
   order: 2;
+}
+
+.message.assistant .message-avatar {
+  margin-top: 2px;
 }
 
 .avatar {
@@ -40,6 +45,13 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+.user-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .assistant-avatar {
   background: var(--accent-color);
 }
@@ -50,17 +62,19 @@
 }
 
 .message.user .message-content {
-  background-color: var(--accent-color);
-  color: white;
-  border-radius: 18px 18px 4px 18px;
-  padding: 12px 16px;
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-radius: 20px;
+  padding: 10px 16px;
   order: 1;
 }
 
 .message.assistant .message-content {
-  background-color: var(--bg-secondary);
-  border-radius: 18px 18px 18px 4px;
-  padding: 16px 20px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  max-width: 100%;
+  flex: 1;
 }
 
 .message-text {
@@ -70,7 +84,7 @@
 }
 
 .message.user .message-text {
-  color: white;
+  color: var(--text-primary);
 }
 
 .message.assistant .message-text {
@@ -86,7 +100,41 @@
 
 .message.user .message-time {
   text-align: right;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-muted);
+}
+
+/* User message meta - outside bubble, show on hover */
+.message.user {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.message.user .user-meta {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-right: 44px;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  order: 3;
+}
+
+.message.user:hover .user-meta {
+  opacity: 1;
+}
+
+.message.user .user-meta .message-time {
+  margin-top: 0;
+  order: 2;
+}
+
+.message.user .user-meta .message-actions {
+  opacity: 1;
+  margin-top: 0;
+  order: 1;
 }
 
 /* Typing indicator */

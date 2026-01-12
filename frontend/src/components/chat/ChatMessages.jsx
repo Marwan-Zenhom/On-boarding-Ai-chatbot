@@ -17,7 +17,8 @@ const ChatMessages = memo(({
   onEdit,
   onReact,
   onRegenerate,
-  chatEndRef
+  chatEndRef,
+  user
 }) => {
   return (
     <div className="chat-messages">
@@ -36,6 +37,7 @@ const ChatMessages = memo(({
           onEdit={onEdit}
           onReact={onReact}
           onRegenerate={onRegenerate}
+          user={user}
         />
       ))}
       

@@ -480,6 +480,7 @@ function App({ user, onSignOut, authFunctions }) {
           currentConversationId={chat.currentConversationId}
           pastConversations={pastConversations}
           showScrollToBottom={showScrollToBottom}
+          user={user}
         />
       </ErrorBoundary>
 

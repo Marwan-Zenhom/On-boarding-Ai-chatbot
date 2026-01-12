@@ -35,14 +35,30 @@ const ActionApprovalModal = ({ actions, onApprove, onReject, isOpen, onClose }) 
         };
       
       case 'book_calendar_event':
-        const startDate = new Date(action.parameters.start_date).toLocaleDateString();
-        const endDate = new Date(action.parameters.end_date).toLocaleDateString();
+        const startDateTime = new Date(action.parameters.start_date);
+        const endDateTime = new Date(action.parameters.end_date);
+        const startDateStr = startDateTime.toLocaleDateString();
+        const startTimeStr = startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const endTimeStr = endDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Calculate duration
+        const durationMs = endDateTime - startDateTime;
+        const durationMinutes = Math.round(durationMs / (1000 * 60));
+        const durationHours = Math.floor(durationMinutes / 60);
+        const durationMins = durationMinutes % 60;
+        const durationStr = durationHours > 0 
+          ? `${durationHours}h ${durationMins > 0 ? `${durationMins}m` : ''}`.trim()
+          : `${durationMins}m`;
+        
         return {
           title: 'Book Calendar Event',
           description: action.parameters.title,
           details: [
-            `Dates: ${startDate} to ${endDate}`,
-            action.parameters.attendees?.length > 0 && `Attendees: ${action.parameters.attendees.join(', ')}`
+            `Date: ${startDateStr}`,
+            `Time: ${startTimeStr} - ${endTimeStr}`,
+            `Duration: ${durationStr}`,
+            action.parameters.attendees?.length > 0 && `Attendees: ${action.parameters.attendees.join(', ')}`,
+            action.parameters.description && `Description: ${action.parameters.description}`
           ].filter(Boolean)
         };
       
@@ -122,12 +138,6 @@ const ActionApprovalModal = ({ actions, onApprove, onReject, isOpen, onClose }) 
                           ))}
                         </div>
                       )}
-
-                      {/* Technical Details */}
-                      <details className="approval-technical-details">
-                        <summary>View technical details</summary>
-                        <pre>{JSON.stringify(action.parameters, null, 2)}</pre>
-                      </details>
                     </div>
                   </div>
                 </div>

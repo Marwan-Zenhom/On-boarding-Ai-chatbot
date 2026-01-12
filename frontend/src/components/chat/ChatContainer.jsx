@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { 
   Sidebar as SidebarIcon, 
   ArrowUp, Mic, MicOff, Square, 
@@ -57,9 +57,27 @@ const ChatContainer = ({
   // Conversation
   currentConversationId,
   pastConversations,
-  showScrollToBottom
+  showScrollToBottom,
+  
+  // User
+  user
 }) => {
-  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  // Auto-resize textarea based on content
+  const adjustTextareaHeight = useCallback(() => {
+    const textarea = inputRef?.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set height to scrollHeight (content height)
+      const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [inputRef]);
+
+  // Adjust height when input changes
+  useEffect(() => {
+    adjustTextareaHeight();
+  }, [input, adjustTextareaHeight]);
 
   // Get current conversation title
   const currentTitle = useMemo(() => {
@@ -134,6 +152,7 @@ const ChatContainer = ({
             onReact={handleMessageReaction}
             onRegenerate={regenerateResponse}
             chatEndRef={chatEndRef}
+            user={user}
           />
         )}
       </div>
@@ -169,7 +188,7 @@ const ChatContainer = ({
           )}
 
           <form onSubmit={handleSubmit}>
-            <div className="input-wrapper">
+            <div className="input-wrapper" onClick={() => inputRef?.current?.focus()}>
               <div className="input-actions-left">
                 <button
                   type="button"
@@ -188,42 +207,13 @@ const ChatContainer = ({
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isGenerating || typingMessageId ? "Generating response..." : "Message ChatGPT..."}
+                placeholder={isGenerating || typingMessageId ? "Generating response..." : "Ask anything"}
                 className="message-input"
                 rows={1}
                 disabled={isGenerating || typingMessageId}
               />
               
               <div className="input-actions-right">
-                {/* Language selector */}
-                {!input.trim() && (
-                  <div className="language-selector-container">
-                    <button
-                      type="button"
-                      onClick={() => setShowLanguageSelector(!showLanguageSelector)}
-                      className="language-toggle"
-                      title={autoDetectLanguage ? "Auto-detecting language" : "Select speech language"}
-                    >
-                      {autoDetectLanguage ? '🌐' : (supportedLanguages.find(lang => lang.code === speechLanguage)?.flag || '🌐')}
-                    </button>
-                    
-                    {showLanguageSelector && (
-                      <LanguageSelector
-                        autoDetectLanguage={autoDetectLanguage}
-                        setAutoDetectLanguage={setAutoDetectLanguage}
-                        detectedLanguage={detectedLanguage}
-                        speechLanguage={speechLanguage}
-                        supportedLanguages={supportedLanguages}
-                        handleLanguageSelect={(code) => {
-                          handleLanguageSelect(code);
-                          setShowLanguageSelector(false);
-                        }}
-                        onClose={() => setShowLanguageSelector(false)}
-                      />
-                    )}
-                  </div>
-                )}
-                
                 <button
                   type={buttonConfig.className === "send-button" ? "submit" : "button"}
                   onClick={buttonConfig.className === "send-button" ? undefined : buttonConfig.onClick}
@@ -237,69 +227,13 @@ const ChatContainer = ({
             </div>
           </form>
           <div className="input-footer">
-            <span>ChatGPT can make mistakes. Check important info.</span>
+            <span>NovaTech Agent can make mistakes. Check important info.</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-// Language selector sub-component
-const LanguageSelector = ({
-  autoDetectLanguage,
-  setAutoDetectLanguage,
-  detectedLanguage,
-  speechLanguage,
-  supportedLanguages,
-  handleLanguageSelect,
-  onClose
-}) => (
-  <div className="language-selector">
-    <div className="language-mode-toggle">
-      <button
-        onClick={() => setAutoDetectLanguage(!autoDetectLanguage)}
-        className={`mode-toggle-btn ${autoDetectLanguage ? 'active' : ''}`}
-      >
-        🤖 Auto-detect
-      </button>
-      <button
-        onClick={() => setAutoDetectLanguage(false)}
-        className={`mode-toggle-btn ${!autoDetectLanguage ? 'active' : ''}`}
-      >
-        🎯 Manual
-      </button>
-    </div>
-    
-    {detectedLanguage && autoDetectLanguage && (
-      <div className="detected-language">
-        <span className="detected-label">Last detected:</span>
-        <span className="detected-flag">
-          {supportedLanguages.find(lang => lang.code === detectedLanguage)?.flag}
-        </span>
-        <span className="detected-name">
-          {supportedLanguages.find(lang => lang.code === detectedLanguage)?.name}
-        </span>
-      </div>
-    )}
-    
-    {!autoDetectLanguage && (
-      <>
-        {supportedLanguages.map(language => (
-          <button
-            key={language.code}
-            onClick={() => handleLanguageSelect(language.code)}
-            className={`language-option ${speechLanguage === language.code ? 'active' : ''}`}
-            title={language.name}
-          >
-            <span className="language-flag">{language.flag}</span>
-            <span className="language-name">{language.name}</span>
-          </button>
-        ))}
-      </>
-    )}
-  </div>
-);
 
 export default ChatContainer;
 

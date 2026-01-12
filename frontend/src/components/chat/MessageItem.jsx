@@ -16,7 +16,8 @@ const MessageItem = memo(({
   onCopy,
   onEdit,
   onReact,
-  onRegenerate
+  onRegenerate,
+  user
 }) => {
   const isEditing = editingMessageId === message.id;
   const isTyping = typingMessageId === message.id;
@@ -28,9 +29,17 @@ const MessageItem = memo(({
     <div className={`message ${message.role}`}>
       <div className="message-avatar">
         {message.role === 'user' ? (
-          <div className="avatar user-avatar-chat">
-            <User className="icon" />
-          </div>
+          user?.photoURL ? (
+            <img 
+              src={user.photoURL} 
+              alt={user.displayName || 'User'} 
+              className="avatar user-avatar-img"
+            />
+          ) : (
+            <div className="avatar user-avatar-chat">
+              <User className="icon" />
+            </div>
+          )
         ) : (
           <div className="avatar assistant-avatar">
             <Bot className="icon" />
@@ -109,21 +118,40 @@ const MessageItem = memo(({
               </div>
             )}
             
-            <div className="message-meta">
-              <div className="message-time">
-                {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            {/* For assistant messages, show meta inside content */}
+            {message.role === 'assistant' && (
+              <div className="message-meta">
+                <div className="message-time">
+                  {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </div>
+                <MessageActions
+                  message={message}
+                  onCopy={onCopy}
+                  onEdit={onEdit}
+                  onReact={onReact}
+                  onRegenerate={onRegenerate}
+                />
               </div>
-              <MessageActions
-                message={message}
-                onCopy={onCopy}
-                onEdit={onEdit}
-                onReact={onReact}
-                onRegenerate={onRegenerate}
-              />
-            </div>
+            )}
           </>
         )}
       </div>
+      
+      {/* For user messages, show meta outside the bubble */}
+      {message.role === 'user' && !isEditing && (
+        <div className="message-meta user-meta">
+          <div className="message-time">
+            {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          </div>
+          <MessageActions
+            message={message}
+            onCopy={onCopy}
+            onEdit={onEdit}
+            onReact={onReact}
+            onRegenerate={onRegenerate}
+          />
+        </div>
+      )}
     </div>
   );
 }, (prevProps, nextProps) => {
