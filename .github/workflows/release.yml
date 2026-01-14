@@ -1,0 +1,198 @@
+# ============================================================================
+# Release Pipeline - NovaTech AI Onboarding Assistant
+# ============================================================================
+# This workflow creates releases when a version tag is pushed
+# 
+# Usage:
+#   git tag v1.2.0
+#   git push origin v1.2.0
+# ============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # ==========================================================================
+  # Validate Tag
+  # ==========================================================================
+  validate:
+    name: 🔍 Validate Tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      is_prerelease: ${{ steps.get_version.outputs.is_prerelease }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🔍 Get version from tag
+        id: get_version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          # Check if it's a prerelease (contains alpha, beta, rc)
+          if [[ "$VERSION" == *"alpha"* ]] || [[ "$VERSION" == *"beta"* ]] || [[ "$VERSION" == *"rc"* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "📦 Version: $VERSION"
+          echo "🏷️ Prerelease: ${{ steps.get_version.outputs.is_prerelease || 'false' }}"
+      
+      - name: ✅ Validate semver format
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z or X.Y.Z-prerelease"
+            exit 1
+          fi
+          echo "✅ Version format is valid"
+
+  # ==========================================================================
+  # Run CI
+  # ==========================================================================
+  ci:
+    name: 🧪 Run CI
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+
+  # ==========================================================================
+  # Build Release Artifacts
+  # ==========================================================================
+  build:
+    name: 🏗️ Build Release
+    runs-on: ubuntu-latest
+    needs: [validate, ci]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      # Build Frontend
+      - name: 📦 Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: 🏗️ Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY || 'placeholder' }}
+      
+      # Create release archives
+      - name: 📦 Create frontend archive
+        run: |
+          cd frontend
+          tar -czvf ../frontend-build-${{ needs.validate.outputs.version }}.tar.gz build/
+      
+      - name: 📦 Create backend archive
+        run: |
+          cd backend
+          # Exclude node_modules, logs, .env files
+          tar --exclude='node_modules' --exclude='logs' --exclude='.env' --exclude='*.log' \
+              -czvf ../backend-${{ needs.validate.outputs.version }}.tar.gz .
+      
+      - name: 📤 Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            frontend-build-*.tar.gz
+            backend-*.tar.gz
+          retention-days: 30
+
+  # ==========================================================================
+  # Create GitHub Release
+  # ==========================================================================
+  release:
+    name: 📦 Create Release
+    runs-on: ubuntu-latest
+    needs: [validate, build]
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📥 Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: ./artifacts
+      
+      - name: 📝 Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          
+          echo "## What's Changed" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "Changes since $PREV_TAG:" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            
+            # Get commit messages
+            git log $PREV_TAG..$CURRENT_TAG --pretty=format:"- %s (%h)" >> CHANGELOG.md
+          else
+            echo "Initial release" >> CHANGELOG.md
+          fi
+          
+          echo "" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$PREV_TAG...$CURRENT_TAG" >> CHANGELOG.md
+          
+          cat CHANGELOG.md
+      
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: v${{ needs.validate.outputs.version }}
+          tag_name: ${{ github.ref }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ needs.validate.outputs.is_prerelease == 'true' }}
+          files: |
+            artifacts/frontend-build-*.tar.gz
+            artifacts/backend-*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 📝 Release summary
+        run: |
+          echo "## 🎉 Release v${{ needs.validate.outputs.version }} Created!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Prerelease:** ${{ needs.validate.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- frontend-build-${{ needs.validate.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+          echo "- backend-${{ needs.validate.outputs.version }}.tar.gz" >> $GITHUB_STEP_SUMMARY
+

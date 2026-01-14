@@ -1,0 +1,244 @@
+# ============================================================================
+# Deployment Pipeline - NovaTech AI Onboarding Assistant
+# ============================================================================
+# This workflow runs on:
+#   - Push to main branch (after PR merge)
+#   - Manual trigger (workflow_dispatch)
+# 
+# Deployment targets (configure as needed):
+#   - Vercel (Frontend)
+#   - Railway / Render (Backend)
+#   - Docker Hub (Container images)
+# ============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  # ==========================================================================
+  # Run CI First
+  # ==========================================================================
+  ci:
+    name: 🧪 Run CI
+    uses: ./.github/workflows/ci.yml
+
+  # ==========================================================================
+  # Build Docker Images (Optional)
+  # ==========================================================================
+  build-images:
+    name: 🐳 Build Docker Images
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' || github.event.inputs.environment == 'production'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # Uncomment and configure when Docker Hub credentials are added
+      # - name: 🔐 Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      
+      - name: 📝 Generate build info
+        run: |
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+          echo "GIT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "VERSION=1.1.0-${GITHUB_SHA::7}" >> $GITHUB_ENV
+      
+      - name: 🏗️ Build info summary
+        run: |
+          echo "## 🐳 Docker Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ env.VERSION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git SHA | ${{ env.GIT_SHA }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Date | ${{ env.BUILD_DATE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment || 'staging' }} |" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Deploy Frontend (Vercel)
+  # ==========================================================================
+  deploy-frontend:
+    name: 🚀 Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: ci
+    environment: 
+      name: ${{ github.event.inputs.environment || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: 📦 Install dependencies
+        working-directory: frontend
+        run: npm ci
+      
+      - name: 🏗️ Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          CI: false
+          REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL || 'http://localhost:8000' }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
+      
+      # Uncomment when Vercel is configured
+      # - name: 🚀 Deploy to Vercel
+      #   id: deploy
+      #   uses: amondnet/vercel-action@v25
+      #   with:
+      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
+      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+      #     working-directory: ./frontend
+      #     vercel-args: ${{ github.event.inputs.environment == 'production' && '--prod' || '' }}
+      
+      - name: 📝 Deployment summary
+        run: |
+          echo "## 🚀 Frontend Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build completed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To enable automatic deployment:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set up Vercel project" >> $GITHUB_STEP_SUMMARY
+          echo "2. Add secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "3. Uncomment the Vercel deployment step" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Deploy Backend (Railway/Render)
+  # ==========================================================================
+  deploy-backend:
+    name: 🚀 Deploy Backend
+    runs-on: ubuntu-latest
+    needs: ci
+    environment: 
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: 📦 Install production dependencies
+        working-directory: backend
+        run: npm ci --omit=dev
+      
+      - name: ✅ Verify dependencies
+        working-directory: backend
+        run: npm ls --depth=0
+      
+      # Uncomment when Railway is configured
+      # - name: 🚀 Deploy to Railway
+      #   uses: bervProject/railway-deploy@main
+      #   with:
+      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
+      #     service: backend
+      
+      - name: 📝 Deployment summary
+        run: |
+          echo "## 🚀 Backend Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build verified successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To enable automatic deployment:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Set up Railway/Render project" >> $GITHUB_STEP_SUMMARY
+          echo "2. Add secrets: RAILWAY_TOKEN (or RENDER_API_KEY)" >> $GITHUB_STEP_SUMMARY
+          echo "3. Configure environment variables in hosting platform" >> $GITHUB_STEP_SUMMARY
+          echo "4. Uncomment the deployment step" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Post-Deployment Health Check
+  # ==========================================================================
+  health-check:
+    name: 🏥 Health Check
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend]
+    if: always() && (needs.deploy-frontend.result == 'success' || needs.deploy-backend.result == 'success')
+    
+    steps:
+      - name: 🏥 Check deployment health
+        run: |
+          echo "## 🏥 Post-Deployment Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.deploy-frontend.result == 'success' && '✅ Deployed' || '⚠️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.deploy-backend.result == 'success' && '✅ Deployed' || '⚠️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Add health check when URLs are available
+          # if [[ -n "${{ secrets.BACKEND_URL }}" ]]; then
+          #   response=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/api/health")
+          #   if [[ "$response" == "200" ]]; then
+          #     echo "✅ Backend health check passed" >> $GITHUB_STEP_SUMMARY
+          #   else
+          #     echo "❌ Backend health check failed (HTTP $response)" >> $GITHUB_STEP_SUMMARY
+          #   fi
+          # fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "ℹ️ Configure BACKEND_URL and FRONTEND_URL secrets to enable health checks" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Notify on Completion
+  # ==========================================================================
+  notify:
+    name: 📢 Notify
+    runs-on: ubuntu-latest
+    needs: [deploy-frontend, deploy-backend, health-check]
+    if: always()
+    
+    steps:
+      - name: 📢 Create deployment summary
+        run: |
+          echo "## 📢 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.deploy-frontend.result }}" == "success" ]] && [[ "${{ needs.deploy-backend.result }}" == "success" ]]; then
+            echo "### ✅ All deployments successful!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ⚠️ Some deployments may have been skipped or failed" >> $GITHUB_STEP_SUMMARY
+          fi
+

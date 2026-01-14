@@ -12,6 +12,7 @@ process.env.SUPABASE_URL = 'https://test-project.supabase.co';
 process.env.SUPABASE_ANON_KEY = 'test_anon_key_that_is_long_enough_to_pass_validation_check_12345678901234567890';
 process.env.SUPABASE_JWT_SECRET = 'test_jwt_secret_that_is_at_least_32_chars_long';
 process.env.GEMINI_API_KEY = 'AItest_gemini_api_key_12345';
+process.env.HUGGINGFACE_API_KEY = 'hf_test_api_key_12345';
 process.env.FRONTEND_URL = 'http://localhost:3000';
 
 // Global test timeout
